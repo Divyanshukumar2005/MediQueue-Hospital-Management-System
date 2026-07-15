@@ -184,9 +184,6 @@ Both scripts read connection details from environment variables (or a placeholde
 - The server refuses to start if `JWT_SECRET` is missing, rather than falling back to an insecure default
 - The Firebase config in the frontend uses a public Web API key, which is standard for Firebase client SDKs — access is controlled through Firebase Authentication rules, and the key should be restricted to the deployed domain in the Google Cloud Console for production use
 
-## License
-
-This project is licensed under the MIT License.
 
 ## Author
 
