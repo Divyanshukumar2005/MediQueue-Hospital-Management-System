@@ -55,13 +55,8 @@ This was built as a full-stack academic project to explore real-world hospital w
 </tr>
 <tr>
 <td width="33%"><img src="screenshots/opd-card.png" alt="Digital OPD card" /><br/><sub>Digital OPD card</sub></td>
-<td width="33%"><img src="screenshots/medicine-availability.png" alt="Medicine availability" /><br/><sub>Medicine availability (patient view)</sub></td>
-<td width="33%"><img src="screenshots/medicine-store-panel.png" alt="Medicine store panel" /><br/><sub>Pharmacy — prescription queue & stock</sub></td>
-</tr>
-<tr>
 <td width="33%"><img src="screenshots/admin-panel.png" alt="Admin panel" /><br/><sub>Admin panel — staff & access management</sub></td>
-<td width="33%"></td>
-<td width="33%"></td>
+<td width="33%"><img src="screenshots/medicine-store-panel.png" alt="Medicine store panel" /><br/><sub>Pharmacy — prescription queue & stock</sub></td>
 </tr>
 </table>
 
