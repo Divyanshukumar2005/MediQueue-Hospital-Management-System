@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OPD Card — MediQueue</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleMobileSidebar()"></div>
+    <aside class="sidebar" id="sidebar"></aside>
+    <nav class="navbar" id="navbar"></nav>
+
+    <!-- Edit OPD Modal -->
+    <div id="editOpdModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center;padding:16px">
+        <div style="background:var(--c-bg);border-radius:var(--r-lg);padding:28px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+            <button onclick="closeEditModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:1rem;cursor:pointer;color:var(--c-ink-3)">✕</button>
+            <h4 style="margin-bottom:16px">✏️ Edit OPD Card</h4>
+            <div style="display:flex;flex-direction:column;gap:14px">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                    <div class="form-group">
+                        <label class="form-label">Age</label>
+                        <input class="form-control" type="number" id="editAge" placeholder="25" min="0" max="120" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Gender</label>
+                        <select class="form-control" id="editGender">
+                            <option value="">Select…</option>
+                            <option>Male</option><option>Female</option><option>Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Blood Group</label>
+                    <select class="form-control" id="editBlood">
+                        <option value="">Select…</option>
+                        <option>A+</option><option>A-</option>
+                        <option>B+</option><option>B-</option>
+                        <option>AB+</option><option>AB-</option>
+                        <option>O+</option><option>O-</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Phone</label>
+                    <input class="form-control" type="tel" id="editPhone" placeholder="+91 98765 43210" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Address</label>
+                    <textarea class="form-control" id="editAddress" rows="3" placeholder="Full address…"></textarea>
+                </div>
+                <div id="editOpdError" style="display:none;padding:8px 12px;background:var(--red-100);border-radius:var(--r-md);font-size:.82rem;color:#b91c1c"></div>
+                <button class="btn btn-primary btn-full" onclick="saveOPD()">💾 Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-layout">
+        <div class="main-content">
+
+            <div class="page-header slide-up">
+                <div class="breadcrumb"><a href="dashboard.html">Home</a> › OPD Card</div>
+                <h1>📋 Digital OPD Card</h1>
+                <p>Your permanent digital health record card.</p>
+            </div>
+
+            <!-- No card state -->
+            <div id="noCardSection" style="display:none;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;" class="opd-grid">
+                    <div class="card card-xl">
+                        <h3 style="margin-bottom:6px;">Create Your OPD Card</h3>
+                        <p style="margin-bottom:20px;font-size:.85rem;">Fill in your basic health information to create a digital OPD card.</p>
+                        <div style="display:flex;flex-direction:column;gap:14px;">
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                                <div class="form-group">
+                                    <label class="form-label">Age</label>
+                                    <input class="form-control" type="number" id="inpAge" placeholder="25" min="0" max="120" />
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Gender</label>
+                                    <select class="form-control" id="inpGender">
+                                        <option value="">Select…</option>
+                                        <option>Male</option><option>Female</option><option>Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Blood Group</label>
+                                <select class="form-control" id="inpBlood">
+                                    <option value="">Select…</option>
+                                    <option>A+</option><option>A-</option>
+                                    <option>B+</option><option>B-</option>
+                                    <option>AB+</option><option>AB-</option>
+                                    <option>O+</option><option>O-</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Phone</label>
+                                <input class="form-control" type="tel" id="inpPhone" placeholder="+91 98765 43210" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Address</label>
+                                <textarea class="form-control" id="inpAddress" placeholder="Full address…" rows="3"></textarea>
+                            </div>
+                            <button class="btn btn-primary btn-lg btn-full" onclick="createOPD()">📋 Create OPD Card</button>
+                        </div>
+                    </div>
+                    <div class="card" style="background:linear-gradient(135deg,var(--c-primary),var(--c-primary));color:#fff;height:fit-content;">
+                        <div style="font-size:40px;margin-bottom:12px;">📋</div>
+                        <h3 style="color:#fff;margin-bottom:8px;">Why create an OPD Card?</h3>
+                        <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px;">
+                            <div style="display:flex;gap:10px;font-size:.85rem;opacity:.9;"><span>🔒</span>Secure digital health record</div>
+                            <div style="display:flex;gap:10px;font-size:.85rem;opacity:.9;"><span>📜</span>Complete visit history in one place</div>
+                            <div style="display:flex;gap:10px;font-size:.85rem;opacity:.9;"><span>💊</span>Prescription & diagnosis archive</div>
+                            <div style="display:flex;gap:10px;font-size:.85rem;opacity:.9;"><span>🚀</span>Faster check-ins on future visits</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card display -->
+            <div id="cardSection" style="display:none;">
+                <!-- Digital card visual -->
+                <div style="background:linear-gradient(135deg,var(--c-primary-dk),var(--c-primary-mid));border-radius:var(--radius-xl);padding:28px;color:#fff;margin-bottom:24px;max-width:600px;box-shadow:var(--shadow-xl);position:relative;overflow:hidden;">
+                    <div style="position:absolute;top:-40px;right:-40px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.07);"></div>
+                    <div style="position:absolute;bottom:-60px;left:-20px;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.05);"></div>
+                    <div style="position:relative;">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;">
+                            <div>
+                                <div style="font-size:.75rem;opacity:.7;letter-spacing:.08em;text-transform:uppercase;font-weight:600;">Digital OPD Card</div>
+                                <div style="font-size:1.4rem;font-weight:800;margin-top:2px;" id="cardPatientName">—</div>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <button onclick="openEditModal()" style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:8px;padding:6px 12px;font-size:.78rem;cursor:pointer;font-weight:600;">✏️ Edit</button>
+                                <div style="text-align:right;">
+                                    <div style="font-size:.72rem;opacity:.6;">Card No.</div>
+                                    <div style="font-family:var(--font-mono);font-weight:700;font-size:1rem;" id="cardNumber">—</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
+                            <div>
+                                <div style="font-size:.7rem;opacity:.6;margin-bottom:2px;">Blood Group</div>
+                                <div style="font-weight:700;" id="cardBlood">—</div>
+                            </div>
+                            <div>
+                                <div style="font-size:.7rem;opacity:.6;margin-bottom:2px;">Age</div>
+                                <div style="font-weight:700;" id="cardAge">—</div>
+                            </div>
+                            <div>
+                                <div style="font-size:.7rem;opacity:.6;margin-bottom:2px;">Gender</div>
+                                <div style="font-weight:700;" id="cardGender">—</div>
+                            </div>
+                            <div>
+                                <div style="font-size:.7rem;opacity:.6;margin-bottom:2px;">Issued</div>
+                                <div style="font-weight:700;font-size:.8rem;" id="cardIssued">—</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Visit history -->
+                <div class="table-wrapper">
+                    <div class="table-header">
+                        <h3>🕑 Visit History</h3>
+                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                            <input type="date" id="searchDate" class="form-control" style="width:auto;font-size:.82rem;padding:5px 10px;" oninput="filterVisits()" placeholder="Filter by date" />
+                            <input type="text" id="searchDoctor" class="form-control" style="width:160px;font-size:.82rem;padding:5px 10px;" oninput="filterVisits()" placeholder="🔍 Doctor name…" />
+                            <span id="visitCount" class="badge badge-blue">0 visits</span>
+                        </div>
+                    </div>
+                    <div id="visitsBody"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+    <script src="script.js"></script>
+    <script>
+        if (!requireAuth(['patient'])) throw '';
+        const user = getUser();
+        document.getElementById('sidebar').innerHTML = buildSidebar('opd');
+        document.getElementById('navbar').innerHTML = buildNavbar('OPD Card', 'Your digital health record');
+
+        let currentCard = null;
+
+        async function loadOPD() {
+            try {
+                const data = await apiCall(`/opd/${user.id}`);
+                currentCard = data.opdCard;
+                renderCard(data.opdCard);
+            } catch (err) {
+                if (err.message.includes('No OPD card')) {
+                    document.getElementById('noCardSection').style.display = 'block';
+                    if (window.innerWidth < 768)
+                        document.querySelector('.opd-grid').style.gridTemplateColumns = '1fr';
+                } else {
+                    showToast('Error', err.message, 'error');
+                }
+            }
+        }
+
+        function renderCard(card) {
+            document.getElementById('noCardSection').style.display = 'none';
+            document.getElementById('cardSection').style.display = 'block';
+            document.getElementById('cardPatientName').textContent = card.user?.name || user.name;
+            document.getElementById('cardNumber').textContent = card.card_number;
+            document.getElementById('cardBlood').textContent = card.blood_group || '—';
+            document.getElementById('cardAge').textContent = card.age || '—';
+            document.getElementById('cardGender').textContent = card.gender || '—';
+            document.getElementById('cardIssued').textContent = fmtDate(card.createdAt);
+            renderVisits(card.visits || []);
+        }
+
+        function renderVisits(visits) {
+            document.getElementById('visitCount').textContent = `${visits.length} visit${visits.length !== 1 ? 's' : ''}`;
+            if (!visits.length) {
+                document.getElementById('visitsBody').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📋</div>
+                        <h4>No visits recorded yet</h4>
+                        <p>Your visit history will appear here after your first consultation</p>
+                    </div>`;
+                return;
+            }
+            const rows = visits.map(v => `
+                <tr>
+                    <td style="color:var(--c-ink-4);font-size:.82rem;">${fmtDate(v.visit_date)}</td>
+                    <td style="font-size:.88rem;max-width:200px;">${v.symptoms}</td>
+                    <td style="font-size:.88rem;max-width:200px;color:var(--c-primary-dk);">${v.diagnosis || '—'}</td>
+                    <td style="font-size:.82rem;max-width:200px;">${v.prescription || '—'}</td>
+                    <td style="font-size:.82rem;color:var(--c-ink-4);">${v.doctor_name || '—'}</td>
+                    <td style="font-size:.82rem;color:var(--c-primary);">${fmtDate(v.follow_up_date) || '—'}</td>
+                </tr>`).join('');
+            document.getElementById('visitsBody').innerHTML = `
+                <table>
+                    <thead><tr>
+                        <th>Date</th><th>Symptoms</th><th>Diagnosis</th>
+                        <th>Prescription</th><th>Doctor</th><th>Follow-up</th>
+                    </tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>`;
+        }
+
+        function filterVisits() {
+            if (!currentCard) return;
+            const dateQ = document.getElementById('searchDate').value;
+            const docQ = document.getElementById('searchDoctor').value.toLowerCase().trim();
+            let visits = currentCard.visits || [];
+            if (dateQ) visits = visits.filter(v => v.visit_date && v.visit_date.startsWith(dateQ));
+            if (docQ) visits = visits.filter(v => (v.doctor_name || '').toLowerCase().includes(docQ));
+            renderVisits(visits);
+        }
+
+        function openEditModal() {
+            if (!currentCard) return;
+            document.getElementById('editAge').value = currentCard.age || '';
+            document.getElementById('editGender').value = currentCard.gender || '';
+            document.getElementById('editBlood').value = currentCard.blood_group || '';
+            document.getElementById('editPhone').value = currentCard.phone || '';
+            document.getElementById('editAddress').value = currentCard.address || '';
+            document.getElementById('editOpdError').style.display = 'none';
+            document.getElementById('editOpdModal').style.display = 'flex';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editOpdModal').style.display = 'none';
+        }
+
+        async function saveOPD() {
+            const errEl = document.getElementById('editOpdError');
+            errEl.style.display = 'none';
+            const payload = {
+                age: document.getElementById('editAge').value || null,
+                gender: document.getElementById('editGender').value || null,
+                blood_group: document.getElementById('editBlood').value || null,
+                phone: document.getElementById('editPhone').value || null,
+                address: document.getElementById('editAddress').value || null,
+            };
+            try {
+                await apiCall(`/opd/${currentCard.id}`, 'PATCH', payload);
+                showToast('Updated!', 'OPD card details saved.', 'success');
+                closeEditModal();
+                await loadOPD();
+            } catch (e) {
+                errEl.textContent = e.message;
+                errEl.style.display = 'block';
+            }
+        }
+
+        async function createOPD() {
+            const payload = {
+                user_id: user.id,
+                age: document.getElementById('inpAge').value || null,
+                gender: document.getElementById('inpGender').value || null,
+                blood_group: document.getElementById('inpBlood').value || null,
+                phone: document.getElementById('inpPhone').value || null,
+                address: document.getElementById('inpAddress').value || null,
+            };
+            showLoading('Creating your OPD card…');
+            try {
+                const data = await apiCall('/create-opd', 'POST', payload);
+                hideLoading();
+                localStorage.setItem('hq_hasOpdCard', true);
+                localStorage.setItem('hq_opdCardId', data.opdCard.id);
+                showToast('OPD Card Created!', `Card No: ${data.opdCard.card_number}`, 'success');
+                await loadOPD();
+            } catch (err) {
+                hideLoading();
+                showToast('Error', err.message, 'error');
+            }
+        }
+
+        loadOPD();
+    </script>
+</body>
+
+</html>

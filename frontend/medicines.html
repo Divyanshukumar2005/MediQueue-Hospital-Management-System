@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Medicines — MediQueue</title>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleMobileSidebar()"></div>
+<aside class="sidebar" id="sidebar"></aside>
+<nav class="navbar" id="navbar"></nav>
+<div class="app-layout">
+  <div class="main-content">
+    <div class="page-header slide-up">
+      <div class="breadcrumb"><a href="dashboard.html">Home</a> › Medicines</div>
+      <h1>💊 Medicine Availability</h1>
+      <p>Check which medicines are available at the hospital pharmacy before your visit.</p>
+    </div>
+
+    <!-- My medicine request status -->
+    <div id="myMedCard" style="display:none;margin-bottom:24px"></div>
+
+    <!-- Medicine list -->
+    <div class="table-wrapper slide-up">
+      <div class="table-header">
+        <h3>Pharmacy Stock</h3>
+        <div style="display:flex;gap:8px">
+          <input class="form-control" id="searchMed" placeholder="Search…" oninput="filterMeds()" style="width:180px;padding:7px 12px;font-size:.84rem"/>
+        </div>
+      </div>
+      <div id="medList">
+        <div class="empty-state"><div class="spinner spinner-blue"></div><p>Loading…</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="toast-container"></div>
+<script src="script.js"></script>
+<script>
+if(!requireAuth(['patient','doctor','admin','medicine_staff'])) throw '';
+const user = getUser();
+document.getElementById('sidebar').innerHTML = buildSidebar('medicines');
+document.getElementById('navbar').innerHTML  = buildNavbar('Medicines','Hospital pharmacy stock');
+
+let allMeds = [];
+
+async function load() {
+  try {
+    const data = await apiCall('/medicines');
+    allMeds = data.medicines||[];
+    renderMeds(allMeds);
+  } catch(e) { showToast('Error',e.message,'error'); }
+
+  try {
+    const mData = await apiCall(`/medicine-requests/user/${user.id}`);
+    const active = (mData.requests||[]).find(r=>['pending','preparing','ready'].includes(r.status));
+    if(active) {
+      document.getElementById('myMedCard').style.display='block';
+      document.getElementById('myMedCard').innerHTML=`
+        <div style="background:${active.status==='ready'?'linear-gradient(135deg,rgba(34,197,94,.15),rgba(34,197,94,.08))':'linear-gradient(135deg,var(--c-primary-lt),rgba(239,246,255,.8))'};
+          border:1.5px solid ${active.status==='ready'?'rgba(34,197,94,.3)':'var(--c-primary-lt)'};border-radius:var(--r-lg);padding:20px;
+          display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+          <div>
+            <div style="font-weight:700;font-size:.95rem">${active.status==='ready'?'✅ Medicine Ready for Pickup!':'💊 Your Prescription Status'}</div>
+            <div style="font-size:.82rem;color:var(--c-ink-3);margin-top:4px">${active.status==='ready'?'Please collect from Medicine Store — Room G-05':'Your prescription is being processed at the medicine store'}</div>
+          </div>
+          ${medStatusBadge(active.status)}
+        </div>`;
+    }
+  } catch(e) {}
+}
+
+function renderMeds(meds) {
+  const avail = meds.filter(m=>m.is_available);
+  const outOf = meds.filter(m=>!m.is_available);
+  document.getElementById('medList').innerHTML=`
+    <div style="padding:16px 20px;background:var(--green-100);border-bottom:1px solid var(--c-surface2)">
+      <span style="font-size:.8rem;font-weight:700;color:#15803d">✅ Available (${avail.length})</span>
+    </div>
+    ${avail.map(m=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--c-surface2)">
+        <div>
+          <div style="font-weight:600;font-size:.88rem">${m.name}</div>
+          <div style="font-size:.76rem;color:var(--c-ink-4)">${m.category||''} · ${m.unit}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:.78rem;color:${m.stock>50?'var(--green-500)':'var(--yellow-500)'};">Stock: ${m.stock}</span>
+          <span class="badge badge-green"><span class="dot dot-green"></span>Available</span>
+        </div>
+      </div>`).join('')}
+    ${outOf.length?`
+      <div style="padding:16px 20px;background:var(--red-100);border-bottom:1px solid var(--c-surface2);border-top:1px solid var(--c-surface2)">
+        <span style="font-size:.8rem;font-weight:700;color:#b91c1c">❌ Out of Stock (${outOf.length})</span>
+      </div>
+      ${outOf.map(m=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--c-surface2);opacity:.7">
+          <div>
+            <div style="font-weight:600;font-size:.88rem;color:var(--c-ink-3)">${m.name}</div>
+            <div style="font-size:.76rem;color:var(--c-ink-4)">${m.category||''} · ${m.unit}</div>
+          </div>
+          <span class="badge badge-red">Out of Stock</span>
+        </div>`).join('')}`:''}`;
+}
+
+function filterMeds() {
+  const q = document.getElementById('searchMed').value.toLowerCase();
+  renderMeds(q ? allMeds.filter(m=>m.name.toLowerCase().includes(q)||m.category?.toLowerCase().includes(q)) : allMeds);
+}
+load();
+</script>
+</body>
+</html>

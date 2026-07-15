@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Environment variables (NEVER commit real secrets)
+.env
+.env.local
+.env.*.local
+
+# OS / Editor junk
+.DS_Store
+Thumbs.db
+.vscode/
+*.log
+
+# Build artifacts
+dist/
+build/

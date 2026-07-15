@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>My Token — MediQueue</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+
+<body>
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleMobileSidebar()"></div>
+    <aside class="sidebar" id="sidebar"></aside>
+    <nav class="navbar" id="navbar"></nav>
+
+    <div class="app-layout">
+        <div class="main-content">
+            <div class="page-header slide-up">
+                <div class="breadcrumb"><a href="dashboard.html">Home</a> › My Token</div>
+                <h1>📱 My Queue Token</h1>
+                <p>Show this QR code at the department counter. Live status updates every 30s.</p>
+            </div>
+
+            <!-- Loading -->
+            <div id="tokenLoading" style="display:flex;justify-content:center;padding:60px 0">
+                <div style="text-align:center">
+                    <div class="spinner spinner-blue" style="width:40px;height:40px;border-width:4px;margin:0 auto 16px"></div>
+                    <p>Loading your token…</p>
+                </div>
+            </div>
+
+            <!-- No token -->
+            <div id="noToken" style="display:none">
+                <div class="card card-xl" style="text-align:center;max-width:480px;margin:0 auto">
+                    <div style="font-size:56px;margin-bottom:16px">🎟️</div>
+                    <h2 style="color:var(--c-ink-2);margin-bottom:8px">No Active Token</h2>
+                    <p style="margin-bottom:24px">You don't have an active token today. Book an appointment to get one.</p>
+                    <a href="appointment.html" class="btn btn-primary btn-lg">📅 Book Appointment</a>
+                </div>
+            </div>
+
+            <!-- Token display -->
+            <div id="tokenCard" style="display:none">
+                <div style="display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:start" class="token-layout">
+
+                    <!-- QR Card -->
+                    <div class="qr-card">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+                            <div style="text-align:left">
+                                <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--c-ink-4)">Your Token</div>
+                                <div class="qr-token-number" id="displayTokenNum">—</div>
+                            </div>
+                            <span id="displayStatus"></span>
+                        </div>
+
+                        <div class="qr-image-wrap">
+                            <div id="qrCanvas"></div>
+                        </div>
+
+                        <div class="token-info-grid">
+                            <div class="token-info-item">
+                                <div class="label">Department</div>
+                                <div class="value" id="displayDept">—</div>
+                            </div>
+                            <div class="token-info-item">
+                                <div class="label">Room</div>
+                                <div class="value" id="displayRoom">—</div>
+                            </div>
+                            <div class="token-info-item">
+                                <div class="label">Est. Wait</div>
+                                <div class="value" id="displayWait">—</div>
+                            </div>
+                            <div class="token-info-item">
+                                <div class="label">Tokens Ahead</div>
+                                <div class="value" id="displayAhead">—</div>
+                            </div>
+                            <div class="token-info-item">
+                                <div class="label">Doctor</div>
+                                <div class="value" id="displayDoctor">—</div>
+                            </div>
+                            <div class="token-info-item">
+                                <div class="label">Appointment Date</div>
+                                <div class="value" id="displayApptDate">—</div>
+                            </div>
+                            <div class="token-info-item">
+                                <div class="label">Now Serving</div>
+                                <div class="value" id="displayCurrentToken" style="font-weight:800;color:var(--c-primary-dk)">—</div>
+                            </div>
+                            <div class="token-info-item">
+                                <div class="label">Issued</div>
+                                <div class="value" id="displayIssued" style="font-size:.8rem">—</div>
+                            </div>
+                        </div>
+
+                        <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap">
+                            <button class="btn btn-outline btn-sm" onclick="printToken()" style="flex:1">🖨️ Print</button>
+                            <button class="btn btn-primary btn-sm" onclick="manualRefresh()" style="flex:1">🔄 Refresh</button>
+                        </div>
+
+                        <!-- Live update indicator -->
+                        <div style="text-align:center;margin-top:10px;font-size:.72rem;color:var(--c-ink-4)" id="lastUpdated">—</div>
+                    </div>
+
+                    <!-- Right side -->
+                    <div style="display:flex;flex-direction:column;gap:16px">
+
+                        <!-- Location card -->
+                        <div class="card">
+                            <h4 style="margin-bottom:14px">📍 Location Details</h4>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                                <div style="background:var(--c-primary-lt);border-radius:var(--r-md);padding:14px;text-align:center">
+                                    <div style="font-size:24px;margin-bottom:6px">🏥</div>
+                                    <div style="font-size:.78rem;color:var(--c-ink-4)">Building</div>
+                                    <div style="font-weight:700;font-size:.88rem">OPD Block A</div>
+                                </div>
+                                <div style="background:var(--c-primary-lt);border-radius:var(--r-md);padding:14px;text-align:center">
+                                    <div style="font-size:24px;margin-bottom:6px">🚪</div>
+                                    <div style="font-size:.78rem;color:var(--c-ink-4)">Room</div>
+                                    <div style="font-weight:700;font-size:.88rem" id="locRoom">—</div>
+                                </div>
+                                <div style="background:var(--c-primary-lt);border-radius:var(--r-md);padding:14px;text-align:center">
+                                    <div style="font-size:24px;margin-bottom:6px">🏢</div>
+                                    <div style="font-size:.78rem;color:var(--c-ink-4)">Floor</div>
+                                    <div style="font-weight:700;font-size:.88rem" id="locFloor">Ground</div>
+                                </div>
+                                <div style="background:var(--c-primary-lt);border-radius:var(--r-md);padding:14px;text-align:center">
+                                    <div style="font-size:24px;margin-bottom:6px">⏰</div>
+                                    <div style="font-size:.78rem;color:var(--c-ink-4)">Est. Call Time</div>
+                                    <div style="font-weight:700;font-size:.88rem" id="locReachBy">—</div>
+                                </div>
+                            </div>
+
+                            <div style="margin-top:14px;padding:14px;background:linear-gradient(135deg,rgba(37,99,235,.08),rgba(99,102,241,.06));
+                                border-radius:var(--r-md);border:1px solid var(--c-primary-lt)">
+                                <div style="font-size:.82rem;font-weight:600;color:var(--c-ink-2);margin-bottom:8px">🚖 Need a ride to hospital?</div>
+                                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                                    <a href="https://ola.com" target="_blank" class="btn btn-outline btn-sm">Ola Cab</a>
+                                    <a href="https://uber.com" target="_blank" class="btn btn-outline btn-sm">Uber</a>
+                                    <a href="https://www.rapido.bike" target="_blank" class="btn btn-outline btn-sm">Rapido</a>
+                                </div>
+                                <p style="font-size:.74rem;color:var(--c-ink-4);margin-top:6px">Book in advance based on your estimated wait time</p>
+                            </div>
+                        </div>
+
+                        <!-- WhatsApp notification box -->
+                        <div class="whatsapp-box">
+                            <div class="whatsapp-icon">💬</div>
+                            <div>
+                                <div style="font-weight:700;font-size:.88rem;color:var(--c-ink)">
+                                    WhatsApp Notifications
+                                    <span class="whatsapp-coming-soon">Coming Soon</span>
+                                </div>
+                                <p style="font-size:.78rem;color:var(--c-ink-3);margin-top:2px">
+                                    Get notified on WhatsApp when your token is about to be called. We'll alert you 5 minutes before so you don't have to wait at the counter.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Queue progress -->
+                        <div class="card">
+                            <h4 style="margin-bottom:6px">📊 Queue Progress</h4>
+                            <p style="font-size:.82rem;margin-bottom:14px">Your position in today's queue</p>
+                            <div id="queueTracker"></div>
+                        </div>
+
+                        <!-- Medicine status -->
+                        <div class="card" id="medicineStatusCard" style="display:none">
+                            <h4 style="margin-bottom:12px">💊 Medicine Status</h4>
+                            <div id="medicineStatusBody"></div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div style="display:flex;gap:10px;flex-wrap:wrap">
+                            <button class="btn btn-danger btn-sm" id="cancelBtn" onclick="cancelToken()" style="display:none">🗑️ Cancel Token</button>
+                            <a href="appointment.html" class="btn btn-outline btn-sm">← New Appointment</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+    <script src="script.js"></script>
+    <script>
+        if (!requireAuth(['patient', 'doctor', 'admin'])) throw '';
+        const user = getUser();
+        document.getElementById('sidebar').innerHTML = buildSidebar('token');
+        document.getElementById('navbar').innerHTML = buildNavbar('My Token', 'QR Code & Queue Status');
+
+        let currentToken = null;
+        let liveInterval = null;
+
+        const FLOOR_MAP = {
+            'OPD-101': 'Ground',
+            'OPD-102': 'Ground',
+            'OPD-205': '2nd',
+            'OPD-310': '3rd',
+            'OPD-412': '4th',
+            'OPD-115': 'Ground'
+        };
+
+        // ── Load token on page open ───────────────────────────────────────────
+        async function loadToken() {
+            const params = new URLSearchParams(window.location.search);
+            // URL id = dashboard ke "View Token" se aaya — show directly, date check nahi
+            const urlTokenId = params.get('id');
+            // localStorage id = fallback only, show only today's
+            const storedId = !urlTokenId ? localStorage.getItem('hq_lastTokenId') : null;
+
+            try {
+                const data = await apiCall(`/tokens/user/${user.id}`);
+                const tokens = data.tokens || [];
+
+                // ── IST-safe local date — UTC nahi, or else 12am-5:30am IST pe MISMATCH ──
+                const _d = new Date();
+                const todayStr = `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`;
+
+                let token = null;
+
+                // Priority 1: URL ?id= — dashboard ke "View Token" se aaya, directly dikhao
+                if (urlTokenId) {
+                    token = tokens.find(t => t.id == urlTokenId) || null;
+                }
+
+                // Priority 2: localStorage stored id — sirf aaj ke token ke liye
+                if (!token && storedId) {
+                    const found = tokens.find(t => t.id == storedId);
+                    if (found && found.appt_date === todayStr) token = found;
+                }
+
+                // Priority 3: Aaj ka active token (waiting/called)
+                if (!token) {
+                    token = tokens.find(t => ['waiting', 'called'].includes(t.status) &&
+                        t.appt_date === todayStr
+                    ) || null;
+                }
+
+                // Priority 4 removed: agar aaj ka token nahi toh "No Token" dikhao.
+                // Pehle kal ka upcoming token dikhata tha — jo galat tha.
+                // Patient ko sirf aaj ka active token dikhna chahiye.
+
+                document.getElementById('tokenLoading').style.display = 'none';
+
+                if (!token) {
+                    document.getElementById('noToken').style.display = 'block';
+                    return;
+                }
+
+                currentToken = token;
+                if (token.id) localStorage.setItem('hq_lastTokenId', token.id);
+
+                renderToken(token);
+                document.getElementById('tokenCard').style.display = 'block';
+
+                // Start live queue polling every 30s (only for active tokens)
+                if (['waiting', 'called'].includes(token.status)) {
+                    fetchLiveData(token);
+                    liveInterval = setInterval(() => fetchLiveData(currentToken), 30000);
+                }
+                loadMedicineStatus();
+
+            } catch (e) {
+                document.getElementById('tokenLoading').style.display = 'none';
+                document.getElementById('noToken').style.display = 'block';
+            }
+        }
+
+        // ── Render token (called once on load) ───────────────────────────────
+        function renderToken(token) {
+            document.getElementById('displayTokenNum').textContent = `#${token.token_number}`;
+            document.getElementById('displayStatus').innerHTML = statusBadge(token.status);
+            document.getElementById('displayDept').textContent = token.department || '—';
+            document.getElementById('displayRoom').textContent = token.room_number || '—';
+            document.getElementById('displayIssued').textContent = fmtDateTime(token.createdAt);
+            document.getElementById('displayApptDate').textContent =
+                token.appt_date ? fmtDate(token.appt_date) : fmtDate(new Date().toISOString().split('T')[0]);
+
+            // Doctor name — enriched from backend JOIN
+            const doctorName = token.doctor_name ||
+                token.appointment?.doctor?.name ||
+                null;
+            document.getElementById('displayDoctor').textContent = doctorName || 'Any Available';
+
+            // Location
+            document.getElementById('locRoom').textContent = token.room_number || '—';
+            document.getElementById('locFloor').textContent = FLOOR_MAP[token.room_number] || 'Ground';
+
+            // Initial wait from stored token data
+            const ahead = token.tokens_ahead ?? 0;
+            document.getElementById('displayAhead').textContent = ahead;
+            document.getElementById('displayWait').textContent = ahead > 0 ? `~${ahead * 10} min` : 'Your turn soon!';
+
+            // Show/hide cancel button
+            document.getElementById('cancelBtn').style.display = ['waiting', 'called'].includes(token.status) ? 'inline-flex' : 'none';
+
+            generateQR(token);
+            renderQueueTracker(token);
+        }
+
+        // ── Live queue data (called every 30s, only updates numbers) ─────────
+        async function fetchLiveData(token) {
+            if (!token || !['waiting', 'called'].includes(token.status)) return;
+            try {
+                const data = await apiCall('/queue-status');
+                const q = (data.queues || []).find(q => q.department === token.department);
+                if (!q) return;
+
+                // How many tokens are ahead of mine
+                const ahead = q.current_token != null ?
+                    Math.max(0, token.token_number - q.current_token - 1) :
+                    (token.tokens_ahead || 0);
+                const avgMin = q.avg_minutes_per_patient || 10;
+
+                // Update displayed numbers
+                document.getElementById('displayAhead').textContent = ahead;
+                document.getElementById('displayWait').textContent =
+                    ahead > 0 ? `~${ahead * avgMin} min` : '🔔 Your turn soon!';
+                document.getElementById('displayCurrentToken').textContent =
+                    q.current_token ? `#${q.current_token}` : 'Not started';
+
+                // Est. call time = now + (ahead × avgMin)
+                if (ahead > 0) {
+                    const estMs = Date.now() + ahead * avgMin * 60000;
+                    const estDate = new Date(estMs);
+                    const h = estDate.getHours(),
+                        m = estDate.getMinutes();
+                    document.getElementById('locReachBy').textContent =
+                        `${h % 12 || 12}:${String(m).padStart(2,'0')} ${h >= 12 ? 'PM' : 'AM'}`;
+                } else {
+                    document.getElementById('locReachBy').textContent = 'Head out now!';
+                }
+
+                // Last updated timestamp
+                document.getElementById('lastUpdated').textContent =
+                    `Last updated: ${new Date().toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'})}`;
+
+                // If token was called, refresh badge
+                if (q.current_token === token.token_number) {
+                    document.getElementById('displayStatus').innerHTML = statusBadge('called');
+                    showToast('🔔 Your Turn!', `Token #${token.token_number} — please proceed to ${token.room_number}`, 'success');
+                    clearInterval(liveInterval);
+                }
+
+            } catch (e) { /* silent — don't disturb user */ }
+        }
+
+        // ── QR code ───────────────────────────────────────────────────────────
+        // token_uid PRIMARY field hai — OPD-YYYYMMDD-DEPT3-NNNN format
+        // Scanner is token_uid se exact date+dept+number match karega
+        // Previous day token will be rejected today due to date mismatch
+        function generateQR(token) {
+            const c = document.getElementById('qrCanvas');
+            c.innerHTML = '';
+            // token_uid ko primary scan field banao
+            // Agar token_uid nahi hai (purane tokens) toh tokenId fallback hai
+            const qrText = token.token_uid || String(token.id);
+            new QRCode(c, {
+                text: qrText,
+                width: 200,
+                height: 200,
+                colorDark: '#1e40af',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H,
+            });
+        }
+
+        // ── Queue tracker steps ───────────────────────────────────────────────
+        function renderQueueTracker(token) {
+            const statusPct = {
+                waiting: 25,
+                called: 75,
+                completed: 100,
+                cancelled: 0
+            };
+            const pct = statusPct[token.status] || 25;
+            const steps = [{
+                label: 'Token Generated',
+                done: true,
+                icon: '✅'
+            }, {
+                label: 'In Queue',
+                done: ['waiting', 'called', 'completed'].includes(token.status),
+                icon: '⏳'
+            }, {
+                label: 'Your Turn Called',
+                done: ['called', 'completed'].includes(token.status),
+                icon: '📢'
+            }, {
+                label: 'Consultation Done',
+                done: token.status === 'completed',
+                icon: '🏁'
+            }, ];
+            document.getElementById('queueTracker').innerHTML = `
+                <div style="margin-bottom:12px">
+                    <div style="display:flex;justify-content:space-between;font-size:.8rem;color:var(--c-ink-3);margin-bottom:6px">
+                        <span>Progress</span><span>${Math.round(pct)}%</span>
+                    </div>
+                    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+                </div>
+                ${steps.map(s => `
+                <div style="display:flex;align-items:center;gap:10px;padding:8px 0">
+                    <div style="width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;
+                        ${s.done ? 'background:var(--green-100)' : 'background:var(--c-surface2);opacity:.5'}">
+                        ${s.done ? s.icon : '○'}
+                    </div>
+                    <span style="font-size:.84rem;font-weight:${s.done?'600':'400'};color:${s.done?'var(--c-ink)':'var(--c-ink-4)'}">
+                        ${s.label}
+                    </span>
+                </div>`).join('')}`;
+        }
+
+        // ── Medicine status ───────────────────────────────────────────────────
+        async function loadMedicineStatus() {
+            try {
+                const data     = await apiCall(`/medicine-requests/user/${user.id}`);
+                const reqs     = data.requests || [];
+                const today    = new Date().toDateString();
+                const todayReq = reqs.find(r => new Date(r.createdAt).toDateString() === today);
+                if (todayReq) {
+                    document.getElementById('medicineStatusCard').style.display = 'block';
+                    document.getElementById('medicineStatusBody').innerHTML = `
+                        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px;background:var(--c-surface2);border-radius:var(--r-md)">
+                            <div>
+                                <div style="font-size:.85rem;font-weight:600">Today's prescription sent to medicine store</div>
+                                <div style="font-size:.78rem;color:var(--c-ink-3);margin-top:2px">${(todayReq.prescription_text||'').substring(0,60)}…</div>
+                            </div>
+                            <div>${medStatusBadge(todayReq.status)}</div>
+                        </div>
+                        ${todayReq.status === 'ready' ? `
+                        <div style="margin-top:10px;padding:10px;background:var(--green-100);border-radius:var(--r-md);font-size:.84rem;font-weight:600;color:#15803d;text-align:center">
+                            ✅ Medicine ready! Please collect from Medicine Store (Room G-05)
+                        </div>` : ''}`;
+                }
+            } catch (e) { /* silent */ }
+        }
+
+        // ── Cancel token ──────────────────────────────────────────────────────
+        async function cancelToken() {
+            if (!currentToken) return;
+            const msg = `Cancel token #${currentToken.token_number} (${currentToken.department})?
+
+You will lose your queue position. This cannot be undone.`;
+            if (!confirm(msg)) return;
+            try {
+                // Use cancel endpoint, not complete
+                await apiCall('/tokens/' + currentToken.id + '/cancel', 'PATCH');
+                clearInterval(liveInterval);
+                showToast('Token Cancelled', `Token #${currentToken.token_number} has been cancelled.`, 'info');
+                setTimeout(() => window.location.href = 'appointment.html', 1400);
+            } catch (e) {
+                // Fallback: mark as completed if cancel endpoint not available
+                try {
+                    await apiCall('/complete-token', 'POST', { token_id: currentToken.id });
+                    clearInterval(liveInterval);
+                    showToast('Token Cancelled', 'You can book a new appointment.', 'info');
+                    setTimeout(() => window.location.href = 'appointment.html', 1400);
+                } catch (e2) { showToast('Error', e2.message, 'error'); }
+            }
+        }
+
+        // ── Manual refresh (button) ───────────────────────────────────────────
+        function manualRefresh() {
+            if (liveInterval) clearInterval(liveInterval);
+            fetchLiveData(currentToken);
+            if (currentToken && ['waiting','called'].includes(currentToken.status)) {
+                liveInterval = setInterval(() => fetchLiveData(currentToken), 30000);
+            }
+            showToast('Refreshed', 'Queue status updated.', 'info');
+        }
+
+        function printToken() { window.print(); }
+
+        // ── Init ──────────────────────────────────────────────────────────────
+        loadToken();
+
+        // Mobile layout fix
+        if (window.innerWidth < 768)
+            document.querySelector('.token-layout')?.style.setProperty('grid-template-columns', '1fr');
+    </script>
+</body>
+
+</html>

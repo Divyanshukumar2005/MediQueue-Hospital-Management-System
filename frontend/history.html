@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Visit History — MediQueue</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleMobileSidebar()"></div>
+    <aside class="sidebar" id="sidebar"></aside>
+    <nav class="navbar" id="navbar"></nav>
+    <div class="app-layout">
+        <div class="main-content">
+            <div class="page-header slide-up">
+                <div class="breadcrumb"><a href="dashboard.html">Home</a> › History</div>
+                <h1>🕑 Visit History</h1>
+                <p>All your past visits and token history.</p>
+            </div>
+
+            <!-- Token history -->
+            <div class="table-wrapper slide-up" style="margin-bottom:24px;">
+                <div class="table-header">
+                    <h3>🎟️ All My Tokens</h3>
+                    <span id="tokenHistCount" class="badge badge-blue">—</span>
+                </div>
+                <div id="tokenHistBody">
+                    <div class="empty-state">
+                        <div class="spinner spinner-blue"></div>
+                        <p>Loading…</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- OPD visit history -->
+            <div class="table-wrapper slide-up">
+                <div class="table-header">
+                    <h3>📋 OPD Visit Records</h3>
+                    <a href="opd.html" class="btn btn-outline btn-sm">View Full OPD Card</a>
+                </div>
+                <div style="padding:12px 16px;border-bottom:1px solid var(--c-surface2);display:flex;gap:10px;flex-wrap:wrap">
+                    <input type="text" id="searchDate" class="form-control" placeholder="🗓️ Search by date (e.g. Apr 2025)" style="max-width:220px;font-size:.85rem" oninput="filterVisits()" />
+                    <input type="text" id="searchDoctor" class="form-control" placeholder="👨‍⚕️ Search by doctor name" style="max-width:220px;font-size:.85rem" oninput="filterVisits()" />
+                    <button class="btn btn-outline btn-sm" onclick="clearSearch()">✕ Clear</button>
+                </div>
+                <div id="visitHistBody">
+                    <div class="empty-state">
+                        <div class="spinner spinner-blue"></div>
+                        <p>Loading…</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="toast-container"></div>
+    <script src="script.js"></script>
+    <script>
+        if (!requireAuth(['patient'])) throw '';
+        const user = getUser();
+        let allVisits = [];
+        document.getElementById('sidebar').innerHTML = buildSidebar('history');
+        document.getElementById('navbar').innerHTML = buildNavbar('History', 'Tokens & visits');
+
+        async function load() {
+            // Tokens
+            try {
+                const data = await apiCall(`/tokens/user/${user.id}`);
+                const tokens = data.tokens || [];
+                document.getElementById('tokenHistCount').textContent = `${tokens.length} tokens`;
+
+                if (!tokens.length) {
+                    document.getElementById('tokenHistBody').innerHTML = `
+          <div class="empty-state"><div class="empty-icon">🎟️</div><h4>No tokens yet</h4>
+          <p>Tokens you generate will appear here</p></div>`;
+                } else {
+                    const rows = tokens.map(t => `
+          <tr>
+            <td><span class="td-mono">#${t.token_number}</span></td>
+            <td>${DEPARTMENTS.find(d=>d.id===t.department)?.icon||''} ${t.department}</td>
+            <td>${t.room_number||'—'}</td>
+            <td>${statusBadge(t.status)}</td>
+            <td style="font-size:.82rem;color:var(--c-ink-4);">${fmtDateTime(t.createdAt)}</td>
+            <td><a href="token.html?id=${t.id}" class="btn btn-outline btn-sm">View</a></td>
+          </tr>`).join('');
+                    document.getElementById('tokenHistBody').innerHTML = `
+          <table><thead><tr>
+            <th>Token</th><th>Department</th><th>Room</th>
+            <th>Status</th><th>Date</th><th></th>
+          </tr></thead><tbody>${rows}</tbody></table>`;
+                }
+            } catch (err) {
+                document.getElementById('tokenHistBody').innerHTML = `<div class="empty-state"><p>${err.message}</p></div>`;
+            }
+
+            // Visits
+            try {
+                const data = await apiCall(`/opd/${user.id}`);
+                allVisits = data.opdCard?.visits || [];
+                renderVisits(allVisits);
+            } catch {
+                document.getElementById('visitHistBody').innerHTML = `
+        <div class="empty-state"><div class="empty-icon">📋</div>
+        <h4>No OPD card found</h4>
+        <p><a href="opd.html" class="btn btn-primary btn-sm" style="margin-top:8px;">Create OPD Card</a></p></div>`;
+            }
+        }
+
+        function renderVisits(visits) {
+            if (!visits.length) {
+                document.getElementById('visitHistBody').innerHTML = `
+        <div class="empty-state"><div class="empty-icon">📋</div><h4>No visits found</h4>
+        <p>Your OPD visit records will appear here</p></div>`;
+                return;
+            }
+            const rows = visits.map(v => `
+      <tr>
+        <td style="font-size:.82rem;color:var(--c-ink-4);">${fmtDate(v.visit_date)}</td>
+        <td style="max-width:200px;font-size:.88rem;">${v.symptoms}</td>
+        <td style="max-width:200px;color:var(--c-primary-dk);font-size:.88rem;">${v.diagnosis||'—'}</td>
+        <td style="max-width:200px;font-size:.82rem;">${v.prescription||'—'}</td>
+        <td style="font-size:.82rem;color:var(--c-ink-4);">${v.doctor_name||'—'}</td>
+        <td style="font-size:.82rem;color:var(--c-primary);">${fmtDate(v.follow_up_date)||'—'}</td>
+      </tr>`).join('');
+            document.getElementById('visitHistBody').innerHTML = `
+      <table><thead><tr>
+        <th>Date</th><th>Symptoms</th><th>Diagnosis</th>
+        <th>Prescription</th><th>Doctor</th><th>Follow-up</th>
+      </tr></thead><tbody>${rows}</tbody></table>`;
+        }
+
+        function filterVisits() {
+            const dateQ = document.getElementById('searchDate').value.trim().toLowerCase();
+            const docQ = document.getElementById('searchDoctor').value.trim().toLowerCase();
+            const filtered = allVisits.filter(v => {
+                const dateStr = fmtDate(v.visit_date).toLowerCase();
+                const docStr = (v.doctor_name || '').toLowerCase();
+                return (!dateQ || dateStr.includes(dateQ)) && (!docQ || docStr.includes(docQ));
+            });
+            renderVisits(filtered);
+        }
+
+        function clearSearch() {
+            document.getElementById('searchDate').value = '';
+            document.getElementById('searchDoctor').value = '';
+            renderVisits(allVisits);
+        }
+
+        load();
+    </script>
+</body>
+
+</html>

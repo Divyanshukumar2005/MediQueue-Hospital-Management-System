@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Medicine Store — MediQueue</title>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleMobileSidebar()"></div>
+<aside class="sidebar" id="sidebar"></aside>
+<nav class="navbar" id="navbar"></nav>
+
+<div class="app-layout">
+  <div class="main-content">
+    <div class="page-header slide-up">
+      <h1>🏪 Medicine Store Panel</h1>
+      <p>Manage prescriptions, stock, and notify patients when medicine is ready</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid stagger" style="grid-template-columns:repeat(4,1fr)">
+      <div class="stat-card"><div class="stat-icon stat-icon-yellow">⏳</div><div class="stat-value" id="sPending">—</div><div class="stat-label">Pending</div></div>
+      <div class="stat-card"><div class="stat-icon stat-icon-blue">🔄</div><div class="stat-value" id="sPreparing">—</div><div class="stat-label">Preparing</div></div>
+      <div class="stat-card"><div class="stat-icon stat-icon-green">✅</div><div class="stat-value" id="sReady">—</div><div class="stat-label">Ready</div></div>
+      <div class="stat-card"><div class="stat-icon stat-icon-purple">📦</div><div class="stat-value" id="sDispensed">—</div><div class="stat-label">Dispensed Today</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 360px;gap:24px" class="med-grid">
+
+      <!-- Left: Prescription requests -->
+      <div>
+        <div class="table-wrapper">
+          <div class="table-header">
+            <h3>💊 Prescription Requests</h3>
+            <div style="display:flex;gap:8px;align-items:center">
+              <select class="form-control" style="width:auto;padding:6px 10px;font-size:.8rem" id="statusFilter" onchange="loadRequests()">
+                <option value="">All</option>
+                <option value="pending">Pending</option>
+                <option value="preparing">Preparing</option>
+                <option value="ready">Ready</option>
+                <option value="dispensed">Dispensed</option>
+              </select>
+              <span class="live-badge"><span class="live-dot"></span>Live</span>
+            </div>
+          </div>
+          <div id="requestsList">
+            <div class="empty-state"><div class="spinner spinner-blue"></div><p>Loading…</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Medicine stock -->
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+            <h4>📋 Medicine Stock</h4>
+            <button class="btn btn-primary btn-sm" onclick="showAddMedicine()">+ Add</button>
+          </div>
+          <div id="stockList">
+            <div class="spinner spinner-blue" style="display:block;margin:20px auto"></div>
+          </div>
+        </div>
+
+        <!-- Add medicine form -->
+        <div class="card" id="addMedCard" style="display:none">
+          <h4 style="margin-bottom:14px">➕ Add Medicine</h4>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="form-group"><label class="form-label">Name</label><input class="form-control" id="mName" placeholder="Paracetamol 500mg"/></div>
+            <div class="form-group"><label class="form-label">Category</label><input class="form-control" id="mCategory" placeholder="Analgesic"/></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div class="form-group"><label class="form-label">Stock</label><input class="form-control" id="mStock" type="number" placeholder="100"/></div>
+              <div class="form-group"><label class="form-label">Unit</label>
+                <select class="form-control" id="mUnit"><option>tablet</option><option>capsule</option><option>syrup</option><option>injection</option></select>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-primary btn-full" onclick="addMedicine()">Save</button>
+              <button class="btn btn-ghost" onclick="document.getElementById('addMedCard').style.display='none'">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Prescription detail modal -->
+<div class="modal-overlay" id="prescModal" style="display:none" onclick="if(event.target===this)closePrescModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>💊 Prescription Details</h3>
+      <button class="modal-close" onclick="closePrescModal()">✕</button>
+    </div>
+    <div class="modal-body" id="prescModalBody"></div>
+    <div class="modal-footer" id="prescModalFooter"></div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="script.js"></script>
+<script>
+if(!requireAuth(['medicine_staff','admin'])) throw '';
+const user = getUser();
+document.getElementById('sidebar').innerHTML = buildSidebar('medadmin');
+document.getElementById('navbar').innerHTML  = buildNavbar('Medicine Store','Prescription management & stock');
+
+async function loadRequests() {
+  const status = document.getElementById('statusFilter').value;
+  try {
+    const data = await apiCall(`/medicine-requests${status?`?status=${status}`:''}`);
+    const reqs = data.requests||[];
+
+    // Update stats
+    ['pending','preparing','ready','dispensed'].forEach(s=>{
+      const count = reqs.filter(r=>r.status===s).length;
+      const idMap = {pending:'sPending',preparing:'sPreparing',ready:'sReady',dispensed:'sDispensed'};
+      document.getElementById(idMap[s]).textContent = count;
+    });
+
+    if(!reqs.length) {
+      document.getElementById('requestsList').innerHTML=`<div class="empty-state"><div class="empty-icon">💊</div><h4>No requests</h4><p>Prescriptions from doctors will appear here</p></div>`;
+      return;
+    }
+    document.getElementById('requestsList').innerHTML=`
+      <table><thead><tr><th>Time</th><th>Patient</th><th>Prescription</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody>${reqs.map(r=>`
+        <tr>
+          <td style="font-size:.8rem;color:var(--c-ink-4)">${fmtTime(r.createdAt)}</td>
+          <td style="font-weight:600;font-size:.85rem">${r.user?.name||'—'}</td>
+          <td style="max-width:180px">
+            <div style="font-size:.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px">${r.prescription_text||'—'}</div>
+            <div style="font-size:.74rem;color:var(--c-ink-4)">Dr: ${r.visit?.doctor_name||'—'}</div>
+          </td>
+          <td>${medStatusBadge(r.status)}</td>
+          <td>
+            <button class="btn btn-outline btn-sm" onclick="openPrescModal(${JSON.stringify(r).replace(/"/g,'&quot;')})">View</button>
+          </td>
+        </tr>`).join('')}
+      </tbody></table>`;
+  } catch(e) { showToast('Error',e.message,'error'); }
+}
+
+function openPrescModal(r) {
+  document.getElementById('prescModal').style.display='flex';
+  document.getElementById('prescModalBody').innerHTML=`
+    <div style="background:var(--c-primary-lt);border-radius:var(--r-md);padding:14px;margin-bottom:12px">
+      <div style="font-weight:700;font-size:.95rem;margin-bottom:4px">${r.user?.name||'—'}</div>
+      <div style="font-size:.82rem;color:var(--c-ink-3)">${r.user?.email||''}</div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label class="form-label">Prescription</label>
+      <div style="padding:12px;background:var(--c-surface2);border-radius:var(--r-md);font-size:.88rem;line-height:1.7;white-space:pre-wrap">${r.prescription_text||'—'}</div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label class="form-label">Diagnosis</label>
+      <div style="font-size:.88rem;color:var(--c-ink-2)">${r.visit?.diagnosis||'—'}</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Admin Notes (optional)</label>
+      <textarea class="form-control" id="modalNotes" rows="2" placeholder="e.g. Metformin out of stock — gave alternative">${r.admin_notes||''}</textarea>
+    </div>`;
+
+  const buttons = {
+    pending:   [{ label:'🔄 Start Preparing', status:'preparing', cls:'btn-warning' }, { label:'❌ Cannot Dispense', status:'dispensed', cls:'btn-danger' }],
+    preparing: [{ label:'✅ Mark as Ready',   status:'ready',     cls:'btn-success' }],
+    ready:     [{ label:'📦 Dispensed',       status:'dispensed', cls:'btn-primary' }],
+    dispensed: [],
+  }[r.status] || [];
+
+  document.getElementById('prescModalFooter').innerHTML=`
+    <button class="btn btn-ghost" onclick="closePrescModal()">Close</button>
+    ${buttons.map(b=>`<button class="btn ${b.cls}" onclick="updateStatus(${r.id},'${b.status}')">${b.label}</button>`).join('')}`;
+}
+
+async function updateStatus(id, status) {
+  const notes = document.getElementById('modalNotes')?.value||'';
+  showLoading('Updating…');
+  try {
+    await apiCall(`/medicine-requests/${id}/status`,'PATCH',{status,admin_notes:notes});
+    hideLoading();
+    closePrescModal();
+    showToast(`Status: ${status}`,status==='ready'?'Patient will be notified':'','success');
+    loadRequests();
+  } catch(e) { hideLoading(); showToast('Error',e.message,'error'); }
+}
+
+function closePrescModal() { document.getElementById('prescModal').style.display='none'; }
+
+async function loadStock() {
+  try {
+    const data = await apiCall('/medicines');
+    const meds = data.medicines||[];
+    document.getElementById('stockList').innerHTML = meds.map(m=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--c-surface2)">
+        <div>
+          <div style="font-size:.84rem;font-weight:600">${m.name}</div>
+          <div style="font-size:.74rem;color:var(--c-ink-4)">${m.category||''} · ${m.unit}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-family:var(--mono);font-size:.82rem;font-weight:700;color:${m.stock>50?'var(--green-500)':m.stock>10?'var(--yellow-500)':'var(--red-500)'}">${m.stock}</span>
+          <span class="${m.is_available?'badge badge-green':'badge badge-red'}">${m.is_available?'In':'Out'}</span>
+        </div>
+      </div>`).join('');
+  } catch(e) { document.getElementById('stockList').innerHTML='<p style="font-size:.82rem;color:var(--c-ink-4);padding:12px">Could not load medicines</p>'; }
+}
+
+function showAddMedicine() { document.getElementById('addMedCard').style.display='block'; }
+
+async function addMedicine() {
+  const name = document.getElementById('mName').value.trim();
+  if(!name) return showToast('Name required','','warning');
+  try {
+    await apiCall('/medicines','POST',{
+      name, category:document.getElementById('mCategory').value,
+      stock:parseInt(document.getElementById('mStock').value)||0,
+      unit:document.getElementById('mUnit').value,
+    });
+    showToast('Medicine added!','','success');
+    document.getElementById('addMedCard').style.display='none';
+    ['mName','mCategory','mStock'].forEach(id=>document.getElementById(id).value='');
+    loadStock();
+  } catch(e) { showToast('Error',e.message,'error'); }
+}
+
+loadRequests();
+loadStock();
+setInterval(loadRequests, 15000);
+if(window.innerWidth<768) document.querySelector('.med-grid')?.style.setProperty('grid-template-columns','1fr');
+</script>
+</body>
+</html>

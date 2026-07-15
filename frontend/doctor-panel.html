@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Doctor Panel — MediQueue</title>
+    <link rel="stylesheet" href="style.css" />
+    <!-- jsQR — loaded dynamically with multiple CDN fallbacks -->
+    <script>
+    (function() {
+        var CDNS = [
+            'https://unpkg.com/jsqr@1.4.0/dist/jsQR.js',
+            'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js'
+        ];
+        function tryLoad(i) {
+            if (i >= CDNS.length) return;
+            var s = document.createElement('script');
+            s.src = CDNS[i];
+            s.onerror = function() { tryLoad(i + 1); };
+            document.head.appendChild(s);
+        }
+        tryLoad(0);
+    })();
+    </script>
+    <style>
+        .scanner-wrap {
+            width: 240px;
+            height: 240px;
+            border-radius: 14px;
+            overflow: hidden;
+            position: relative;
+            background: #1a1a1a;
+            border: 2px solid var(--c-border);
+            margin: 0 auto 12px
+        }
+        
+        .scanner-wrap video,
+        .scanner-wrap canvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover
+        }
+        
+        .scanner-wrap canvas {
+            display: none
+        }
+        
+        .scan-corner {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border-color: #185FA5;
+            border-style: solid;
+            border-width: 0;
+            z-index: 10
+        }
+        
+        .scan-corner.tl {
+            top: 14px;
+            left: 14px;
+            border-top-width: 3px;
+            border-left-width: 3px;
+            border-radius: 4px 0 0 0
+        }
+        
+        .scan-corner.tr {
+            top: 14px;
+            right: 14px;
+            border-top-width: 3px;
+            border-right-width: 3px;
+            border-radius: 0 4px 0 0
+        }
+        
+        .scan-corner.bl {
+            bottom: 14px;
+            left: 14px;
+            border-bottom-width: 3px;
+            border-left-width: 3px;
+            border-radius: 0 0 0 4px
+        }
+        
+        .scan-corner.br {
+            bottom: 14px;
+            right: 14px;
+            border-bottom-width: 3px;
+            border-right-width: 3px;
+            border-radius: 0 0 4px 0
+        }
+        
+        .scan-line {
+            position: absolute;
+            left: 14px;
+            right: 14px;
+            height: 2px;
+            z-index: 10;
+            background: linear-gradient(90deg, transparent, #185FA5, transparent);
+            animation: scanMove 2s ease-in-out infinite
+        }
+        
+        @keyframes scanMove {
+            0% {
+                top: 14px;
+                opacity: 0
+            }
+            10% {
+                opacity: 1
+            }
+            90% {
+                opacity: 1
+            }
+            100% {
+                top: calc(100% - 16px);
+                opacity: 0
+            }
+        }
+        
+        .scan-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 8px;
+            color: #888;
+            font-size: .8rem;
+            text-align: center;
+            padding: 16px
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleMobileSidebar()"></div>
+    <aside class="sidebar" id="sidebar"></aside>
+    <nav class="navbar" id="navbar"></nav>
+
+    <!-- Edit Profile Modal -->
+    <div id="editProfileModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center;padding:16px">
+        <div style="background:var(--c-bg);border-radius:var(--r-lg);padding:28px;width:100%;max-width:460px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+            <button onclick="document.getElementById('editProfileModal').style.display='none'" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:1rem;cursor:pointer;color:var(--c-ink-3)">✕</button>
+            <h4 style="margin-bottom:16px">✏️ Edit My Profile</h4>
+            <div style="display:flex;flex-direction:column;gap:14px">
+                <div class="form-group">
+                    <label class="form-label">Specialization</label>
+                    <input class="form-control" id="epSpec" placeholder="e.g. General Physician" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Room Number</label>
+                    <input class="form-control" id="epRoom" placeholder="e.g. OPD-101" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Available Days</label>
+                    <input class="form-control" id="epDays" placeholder="Mon,Tue,Wed,Thu,Fri" />
+                </div>
+                <div id="epError" style="display:none;padding:8px 12px;background:var(--red-100);border-radius:var(--r-md);font-size:.82rem;color:#b91c1c"></div>
+                <button class="btn btn-primary btn-full" onclick="saveProfile()">💾 Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-layout">
+        <div class="main-content">
+            <div class="page-header slide-up">
+                <h1>⚕️ Doctor Panel</h1>
+                <p>Scan patient QR → view history → record visit → send to medicine store</p>
+            </div>
+
+            <div style="display:grid;grid-template-columns:340px 1fr;gap:24px;align-items:start" class="doc-grid">
+
+                <!-- Left column -->
+                <div style="display:flex;flex-direction:column;gap:16px">
+
+                    <!-- My Profile Card -->
+                    <div class="card" id="myProfileCard">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                            <h4 style="margin:0">👨‍⚕️ My Profile</h4>
+                            <button class="btn btn-outline btn-sm" onclick="openEditProfile()">✏️ Edit</button>
+                        </div>
+                        <div id="myProfileBody" style="font-size:.84rem;color:var(--c-ink-2)">Loading…</div>
+                    </div>
+
+                    <!-- QR Scanner -->
+                    <div class="card card-xl">
+                        <h3 style="margin-bottom:4px">📷 Scan Patient Token</h3>
+                        <p style="font-size:.82rem;margin-bottom:14px">Use camera or type token number manually</p>
+
+                        <!-- Camera scanner -->
+                        <div class="scanner-wrap" id="scannerWrap">
+                            <video id="scanVideo" playsinline muted></video>
+                            <canvas id="scanCanvas"></canvas>
+                            <div class="scan-corner tl"></div>
+                            <div class="scan-corner tr"></div>
+                            <div class="scan-corner bl"></div>
+                            <div class="scan-corner br"></div>
+                            <div class="scan-line" id="scanLine" style="display:none"></div>
+                            <div class="scan-placeholder" id="scanPlaceholder">
+                                <span style="font-size:32px">📷</span>
+                                <span>Camera off</span>
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:8px;margin-bottom:12px">
+                            <button class="btn btn-primary btn-sm" style="flex:1" id="camBtn" onclick="toggleCamera()">▶ Start Camera</button>
+                            <button class="btn btn-outline btn-sm" style="flex:1" id="stopCamBtn" onclick="stopCamera()" style="display:none">⏹ Stop</button>
+                        </div>
+                        <p style="text-align:center;font-size:.75rem;color:var(--c-ink-4);margin-bottom:10px">— or enter manually —</p>
+                        <div class="form-group" style="margin-bottom:12px">
+                            <input class="form-control" id="scanInput" type="number" placeholder="Token number e.g. 5" onkeypress="if(event.key==='Enter')scanPatient()" />
+                        </div>
+                        <button class="btn btn-primary btn-full" onclick="scanPatient()" id="scanBtn">🔍 Load Patient</button>
+                    </div>
+
+                    <!-- Queue list -->
+                    <div class="table-wrapper">
+                        <div class="table-header">
+                            <h3>Today's Queue</h3>
+                            <div style="display:flex;gap:8px;align-items:center">
+                                <select class="form-control" style="width:auto;padding:6px 10px;font-size:.8rem" id="deptFilter" onchange="loadQueue()">
+                <option value="">All Depts</option>
+                <option>General</option><option>ENT</option><option>Cardiology</option>
+                <option>Orthopedics</option><option>Pediatrics</option>
+              </select>
+                                <span class="live-badge"><span class="live-dot"></span>Live</span>
+                            </div>
+                        </div>
+                        <div id="queueList">
+                            <div class="empty-state" style="padding:30px">
+                                <div class="empty-icon">🎟️</div>
+                                <p>Select dept to see queue</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Call next -->
+                    <div class="calling-panel">
+                        <div style="font-size:.75rem;opacity:.7;margin-bottom:4px">NOW SERVING</div>
+                        <div class="current-token" id="currentServing">—</div>
+                        <div style="font-size:.88rem;opacity:.8;margin-bottom:20px" id="servingDept">Select department</div>
+                        <button class="btn btn-full" id="nextBtn" onclick="callNext()" style="background:rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.4);color:#fff;font-size:.95rem;border-radius:var(--r-md);padding:12px">
+            📢 Call Next Token
+          </button>
+                    </div>
+                </div>
+
+                <!-- Right: Patient details + Visit form -->
+                <div style="display:flex;flex-direction:column;gap:20px">
+
+                    <!-- Patient info (shown after scan) -->
+                    <div id="patientSection" style="display:none">
+                        <div class="card card-xl slide-up">
+                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+                                <h3>👤 Patient Details</h3>
+                                <button class="btn btn-ghost btn-sm" onclick="clearPatient()">✕ Clear</button>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:14px;padding:14px;background:var(--c-primary-lt);border-radius:var(--r-lg);margin-bottom:16px">
+                                <img id="patientAvatar" src="" alt="" style="width:52px;height:52px;border-radius:50%;border:2px solid var(--c-border)" />
+                                <div>
+                                    <div style="font-weight:700;font-size:1rem" id="patientName">—</div>
+                                    <div style="font-size:.82rem;color:var(--c-ink-3)" id="patientEmail">—</div>
+                                    <div style="margin-top:4px" id="patientBadges"></div>
+                                </div>
+                                <div style="margin-left:auto;text-align:right">
+                                    <div style="font-family:var(--mono);font-size:1.5rem;font-weight:800;color:var(--c-primary-dk)" id="patientTokenNum">—</div>
+                                    <div style="font-size:.75rem;color:var(--c-ink-4)" id="patientDept">—</div>
+                                </div>
+                            </div>
+
+                            <!-- Token verify banner: dept mismatch warning -->
+                            <div id="deptMismatchWarn" style="display:none;margin-bottom:14px;padding:10px 14px;background:rgba(245,158,11,.12);border:1.5px solid rgba(245,158,11,.4);border-radius:var(--r-md);font-size:.83rem;color:#92400e">
+                                ⚠️ <strong>Department Mismatch:</strong> This token belongs to <strong id="warnDeptName">—</strong> department. Please verify the patient is at the correct counter.
+                            </div>
+
+                            <!-- OPD Card info -->
+                            <div id="opdCardInfo" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px"></div>
+
+                            <!-- Past history summary -->
+                            <div id="historySection" style="display:none">
+                                <h4 style="margin-bottom:10px;color:var(--c-ink-2)">📋 Past Visit History</h4>
+                                <div id="pastHistory" style="max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:8px"></div>
+                            </div>
+                        </div>
+
+                        <!-- Visit form -->
+                        <div class="card card-xl slide-up" style="margin-top:16px">
+                            <h3 style="margin-bottom:4px">📝 Record Visit</h3>
+                            <p style="font-size:.82rem;margin-bottom:20px">Fill details and choose what to do after consultation</p>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px" class="visit-form-grid">
+                                <div class="form-group" style="grid-column:1/-1">
+                                    <label class="form-label">Symptoms *</label>
+                                    <textarea class="form-control" id="vSymptoms" placeholder="Patient's complaints and symptoms…" rows="3"></textarea>
+                                </div>
+                                <div class="form-group" style="grid-column:1/-1">
+                                    <label class="form-label">Diagnosis</label>
+                                    <textarea class="form-control" id="vDiagnosis" placeholder="Doctor's diagnosis…" rows="2"></textarea>
+                                </div>
+                                <div class="form-group" style="grid-column:1/-1">
+                                    <label class="form-label">Prescription</label>
+                                    <textarea class="form-control" id="vPrescription" placeholder="Medicine name, dosage, duration. E.g: Paracetamol 500mg - 1 tablet twice daily × 5 days" rows="3"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Doctor Name</label>
+                                    <input class="form-control" id="vDoctor" placeholder="Dr. Sharma" />
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Follow-up Date</label>
+                                    <input class="form-control" type="date" id="vFollowup" />
+                                </div>
+                            </div>
+                            <div style="margin-top:24px;padding:16px;background:var(--c-surface2);border-radius:var(--r-lg);border:1px solid var(--c-border)">
+                                <h4 style="margin-bottom:12px;color:var(--c-ink-2)">After Consultation:</h4>
+                                <div style="display:flex;gap:12px;flex-wrap:wrap">
+                                    <button class="btn btn-outline" onclick="saveVisit(false)">✅ Close Session</button>
+                                    <button class="btn btn-success" onclick="saveVisit(true)">💊 Close + Send to Medicine Store</button>
+                                </div>
+                                <p style="font-size:.77rem;color:var(--c-ink-4);margin-top:10px">
+                                    "Send to Medicine Store" will forward the prescription to the medicine admin panel automatically.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Placeholder when no patient loaded -->
+                    <div id="noPatientPlaceholder">
+                        <div class="card card-xl" style="text-align:center;padding:60px 24px">
+                            <div style="font-size:56px;margin-bottom:16px">📷</div>
+                            <h3 style="color:var(--c-ink-2);margin-bottom:8px">No Patient Loaded</h3>
+                            <p>Scan QR code or enter token number to load patient details</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+    <script src="script.js"></script>
+    <script>
+        if (!requireAuth(['doctor', 'admin'])) throw '';
+        const user = getUser();
+        document.getElementById('sidebar').innerHTML = buildSidebar('doctor');
+        document.getElementById('navbar').innerHTML = buildNavbar('Doctor Panel', 'Manage queue & record visits');
+
+        let currentPatient = null;
+        let myDoctorProfile = null;
+        let cameraStream = null;
+        let cameraInterval = null;
+
+        // ── Load my doctor profile
+        async function loadMyProfile() {
+            try {
+                // Find doctor entry matching logged-in user name
+                const data = await apiCall('/doctors');
+                const me = (data.doctors || []).find(d => d.name === user.name || d.name.toLowerCase().includes(user.name.toLowerCase().split(' ')[0]));
+                myDoctorProfile = me || null;
+                const box = document.getElementById('myProfileBody');
+                if (me) {
+                    box.innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div><span style="color:var(--c-ink-4);font-size:.75rem">Dept</span><br><b>${me.department}</b></div>
+          <div><span style="color:var(--c-ink-4);font-size:.75rem">Room</span><br><b>${me.room_number||'—'}</b></div>
+          <div style="grid-column:1/-1"><span style="color:var(--c-ink-4);font-size:.75rem">Specialization</span><br><b>${me.specialization||'—'}</b></div>
+          <div style="grid-column:1/-1"><span style="color:var(--c-ink-4);font-size:.75rem">Available Days</span><br><b>${me.available_days||'—'}</b></div>
+        </div>`;
+                } else {
+                    box.innerHTML = `<p style="color:var(--c-ink-4);font-size:.82rem">Profile not linked. Contact admin to link your doctor entry.</p>`;
+                }
+            } catch (e) {
+                document.getElementById('myProfileBody').textContent = 'Could not load profile.';
+            }
+        }
+
+        // ── Open edit profile modal
+        function openEditProfile() {
+            if (!myDoctorProfile) return showToast('No profile linked', 'Contact admin to link your doctor entry', 'warning');
+            document.getElementById('epSpec').value = myDoctorProfile.specialization || '';
+            document.getElementById('epRoom').value = myDoctorProfile.room_number || '';
+            document.getElementById('epDays').value = myDoctorProfile.available_days || 'Mon,Tue,Wed,Thu,Fri';
+            document.getElementById('epError').style.display = 'none';
+            document.getElementById('editProfileModal').style.display = 'flex';
+        }
+
+        async function saveProfile() {
+            if (!myDoctorProfile) return;
+            const spec = document.getElementById('epSpec').value.trim();
+            const room = document.getElementById('epRoom').value.trim();
+            const days = document.getElementById('epDays').value.trim();
+            const errEl = document.getElementById('epError');
+            errEl.style.display = 'none';
+            try {
+                await apiCall(`/admin/doctors/${myDoctorProfile.id}`, 'PATCH', {
+                    specialization: spec,
+                    room_number: room,
+                    available_days: days
+                });
+                document.getElementById('editProfileModal').style.display = 'none';
+                showToast('Profile updated', 'Your details have been saved', 'success');
+                loadMyProfile();
+            } catch (e) {
+                errEl.textContent = e.message;
+                errEl.style.display = 'block';
+            }
+        }
+
+        // ── Wait for jsQR to load (max 8s) ───────────────────────────────────
+        function waitForJsQR() {
+            return new Promise((resolve, reject) => {
+                if (typeof jsQR !== 'undefined') return resolve();
+                let tries = 0;
+                const t = setInterval(() => {
+                    if (typeof jsQR !== 'undefined') { clearInterval(t); resolve(); }
+                    else if (++tries > 40) { clearInterval(t); reject(new Error('jsQR failed to load')); }
+                }, 200);
+            });
+        }
+
+        // ── Camera scanner
+        async function toggleCamera() {
+            if (cameraStream) {
+                stopCamera();
+                return;
+            }
+            const video = document.getElementById('scanVideo');
+            const canvas = document.getElementById('scanCanvas');
+            const placeholder = document.getElementById('scanPlaceholder');
+            const scanLine = document.getElementById('scanLine');
+            const camBtn = document.getElementById('camBtn');
+
+            // Load jsQR first — don't start camera until library is ready
+            try {
+                showToast('Loading scanner…', 'Preparing QR library', 'info');
+                await waitForJsQR();
+            } catch(e) {
+                showToast('QR Scanner Error', 'Scanner library could not load. Check internet connection and try again.', 'error');
+                return;
+            }
+
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { ideal: 'environment' } },
+                    audio: false
+                });
+                video.srcObject = cameraStream;
+                await video.play();
+                placeholder.style.display = 'none';
+                scanLine.style.display = 'block';
+                camBtn.textContent = '⏹ Stop Camera';
+                camBtn.className = 'btn btn-danger btn-sm';
+                camBtn.style.flex = '1';
+
+                // Cache context OUTSIDE interval — willReadFrequently for repeated getImageData calls
+                const scanCtx = canvas.getContext('2d', {
+                    willReadFrequently: true
+                });
+
+                cameraInterval = setInterval(() => {
+                    if (!cameraStream) return;
+                    if (!video.videoWidth || !video.videoHeight) return;
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    scanCtx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const imageData = scanCtx.getImageData(0, 0, canvas.width, canvas.height);
+                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                        inversionAttempts: 'dontInvert'
+                    });
+                    if (code) {
+                        // ── QR Parse: token_uid preferred ──
+                        // New format: OPDGEN23042026DIVMOH003 (no dashes)
+                        // Old format: OPD-20250423-GEN-0003 (with dashes)
+                        // Or JSON blob with token_uid / tokenId field
+                        let scanIdentifier = null;
+                        let displayNum = null;
+                        const raw = code.data.trim();
+                        if (raw.toUpperCase().startsWith('OPD')) {
+                            // Bare token_uid (both old and new format)
+                            scanIdentifier = raw.toUpperCase();
+                            // Extract display number: last 3-4 digits at end
+                            const numMatch = raw.match(/(\d+)$/);
+                            displayNum = numMatch ? parseInt(numMatch[1]) : null;
+                        } else {
+                            try {
+                                const parsed = JSON.parse(raw);
+                                if (parsed.token_uid) {
+                                    scanIdentifier = parsed.token_uid.toUpperCase();
+                                } else if (parsed.tokenId) {
+                                    scanIdentifier = String(parsed.tokenId);
+                                }
+                                displayNum = parsed.token || parsed.tokenNum || null;
+                            } catch {
+                                const n = parseInt(raw);
+                                if (!isNaN(n)) {
+                                    scanIdentifier = String(n);
+                                    displayNum = n;
+                                }
+                            }
+                        }
+                        if (scanIdentifier) {
+                            stopCamera();
+                            // show display number in scanInput
+                            document.getElementById('scanInput').value = displayNum || scanIdentifier;
+                            // scanPatient ko identifier se call karo (doctor filter applied inside)
+                            scanPatientById(scanIdentifier);
+                        }
+                    }
+                }, 300);
+            } catch (e) {
+                showToast('Camera error', e.message || 'Could not access camera', 'error');
+            }
+        }
+
+        function stopCamera() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(t => t.stop());
+                cameraStream = null;
+            }
+            if (cameraInterval) {
+                clearInterval(cameraInterval);
+                cameraInterval = null;
+            }
+            const video = document.getElementById('scanVideo');
+            video.srcObject = null;
+            document.getElementById('scanPlaceholder').style.display = 'flex';
+            document.getElementById('scanLine').style.display = 'none';
+            const camBtn = document.getElementById('camBtn');
+            camBtn.textContent = '▶ Start Camera';
+            camBtn.className = 'btn btn-primary btn-sm';
+            camBtn.style.flex = '1';
+        }
+
+        // ── Core scan function — identifier = token_uid OR DB id OR token_number ──
+        async function scanPatientById(identifier) {
+            const btn = document.getElementById('scanBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Loading…';
+            try {
+                // Doctor apna department aur id query mein bhejta hai
+                // Taaki sirf apne department + apne patients hi open ho sakein
+                let queryParams = '';
+                if (myDoctorProfile) {
+                    const params = new URLSearchParams();
+                    if (myDoctorProfile.department) params.set('department', myDoctorProfile.department);
+                    if (myDoctorProfile.id) params.set('doctor_id', myDoctorProfile.id);
+                    queryParams = '?' + params.toString();
+                }
+                const data = await apiCall(`/token-scan/${encodeURIComponent(identifier)}${queryParams}`);
+                renderPatient(data);
+                document.getElementById('patientSection').style.display = 'block';
+                document.getElementById('noPatientPlaceholder').style.display = 'none';
+                showToast('Patient loaded', data.token.user?.name || '', 'success');
+            } catch (e) {
+                showToast('Not found', e.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🔍 Load Patient';
+            }
+        }
+
+        // ── Scan patient — manual input box se ──
+        // Handles: bare number (token_number for today), OPD token_uid, DB id
+        async function scanPatient() {
+            const input = document.getElementById('scanInput').value.trim();
+            if (!input) return showToast('Enter token number', '', 'warning');
+            await scanPatientById(input);
+        }
+
+        function renderPatient(data) {
+            currentPatient = data;
+            const {
+                token,
+                opdCard,
+                isNewPatient
+            } = data;
+            const u = token.user || {};
+            const avatar = u.photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name||'P')}&background=2563eb&color=fff`;
+
+            document.getElementById('patientAvatar').src = avatar;
+            document.getElementById('patientName').textContent = u.name || '—';
+            document.getElementById('patientEmail').textContent = u.email || '—';
+            document.getElementById('patientTokenNum').textContent = `#${token.token_number}`;
+            document.getElementById('patientDept').textContent = token.department || '—';
+            document.getElementById('patientBadges').innerHTML = isNewPatient ?
+                '<span class="badge badge-purple">🆕 New Patient</span>' :
+                '<span class="badge badge-green">✅ Returning</span>';
+
+            // Department mismatch check
+            const selectedDept = document.getElementById('deptFilter').value;
+            const warnEl = document.getElementById('deptMismatchWarn');
+            if (selectedDept && token.department && token.department !== selectedDept) {
+                document.getElementById('warnDeptName').textContent = token.department;
+                warnEl.style.display = 'block';
+            } else {
+                warnEl.style.display = 'none';
+            }
+
+            // OPD Card info
+            if (opdCard) {
+                document.getElementById('opdCardInfo').innerHTML = [
+                    ['Card No', opdCard.card_number],
+                    ['Blood Group', opdCard.blood_group || '—'],
+                    ['Age', opdCard.age || '—'],
+                    ['Gender', opdCard.gender || '—']
+                ].map(([l, v]) => `
+      <div style="background:var(--c-surface2);border-radius:var(--r-md);padding:10px;text-align:center">
+        <div style="font-size:.72rem;color:var(--c-ink-4);margin-bottom:2px">${l}</div>
+        <div style="font-weight:700;font-size:.85rem">${v}</div>
+      </div>`).join('');
+                const visits = opdCard.visits || [];
+                if (visits.length) {
+                    document.getElementById('historySection').style.display = 'block';
+                    document.getElementById('pastHistory').innerHTML = visits.map(v => `
+        <div style="padding:10px 12px;background:rgba(37,99,235,.04);border-radius:var(--r-md);border-left:3px solid var(--c-primary)">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span style="font-size:.8rem;font-weight:600">${fmtDate(v.visit_date)}</span>
+            <span style="font-size:.75rem;color:var(--c-ink-4)">${v.doctor_name||'—'}</span>
+          </div>
+          <div style="font-size:.8rem;color:var(--c-ink-2)"><b>S:</b> ${v.symptoms||'—'}</div>
+          ${v.diagnosis?`<div style="font-size:.8rem;color:var(--c-primary-dk)"><b>D:</b> ${v.diagnosis}</div>`:''}
+          ${v.prescription?`<div style="font-size:.78rem;color:var(--c-ink-3)"><b>Rx:</b> ${v.prescription}</div>`:''}
+        </div>`).join('');
+    } else {
+      document.getElementById('historySection').style.display='none';
+    }
+  } else {
+    document.getElementById('opdCardInfo').innerHTML = `<div style="grid-column:1/-1;padding:10px;background:var(--purple-100);border-radius:var(--r-md);color:#6d28d9;font-size:.82rem;font-weight:500">🆕 No OPD card yet — will be created on first visit save</div>`;
+    document.getElementById('historySection').style.display='none';
+  }
+
+  document.getElementById('vDoctor').value = user.name||'';
+}
+
+function clearPatient() {
+  currentPatient = null;
+  stopCamera();
+  document.getElementById('patientSection').style.display='none';
+  document.getElementById('noPatientPlaceholder').style.display='block';
+  document.getElementById('scanInput').value='';
+  ['vSymptoms','vDiagnosis','vPrescription','vFollowup'].forEach(id=>document.getElementById(id).value='');
+}
+
+// ── Save visit
+async function saveVisit(sendToMedicine) {
+  if(!currentPatient) return showToast('Load a patient first','','warning');
+  const symptoms = document.getElementById('vSymptoms').value.trim();
+  if(!symptoms) return showToast('Symptoms required','','warning');
+
+  const { token, opdCard } = currentPatient;
+  const user_ = token.user;
+
+  let opdId = opdCard?.id;
+  if(!opdId) {
+    showLoading('Creating OPD card…');
+    try {
+      const cd = await apiCall('/create-opd','POST',{ user_id:user_.id });
+      opdId = cd.opdCard.id;
+    } catch(e) { hideLoading(); return showToast('OPD create failed',e.message,'error'); }
+  }
+
+  showLoading(sendToMedicine ? 'Saving & sending to medicine…' : 'Saving visit…');
+  try {
+    await apiCall('/add-visit','POST',{
+      opd_id:          opdId,
+      token_id:        token.id,
+      symptoms,
+      diagnosis:       document.getElementById('vDiagnosis').value.trim()||null,
+      prescription:    document.getElementById('vPrescription').value.trim()||null,
+      doctor_name:     document.getElementById('vDoctor').value.trim()||null,
+      follow_up_date:  document.getElementById('vFollowup').value||null,
+      send_to_medicine:sendToMedicine,
+    });
+    hideLoading();
+    showToast(sendToMedicine?'Visit saved + Sent to medicine!':'Visit saved!', `Patient: ${user_?.name}`, 'success');
+    loadQueue();
+    clearPatient();
+  } catch(e) { hideLoading(); showToast('Error',e.message,'error'); }
+}
+
+// ── Queue
+async function loadQueue() {
+  const dept = document.getElementById('deptFilter').value;
+  const list = document.getElementById('queueList');
+  if(!dept) { list.innerHTML='<div class="empty-state" style="padding:24px"><div class="empty-icon">🎟️</div><p>Select a department</p></div>'; return; }
+  try {
+    const data = await apiCall(`/tokens?department=${dept}&status=waiting`);
+    const tokens = data.tokens||[];
+    document.getElementById('servingDept').textContent = dept;
+    if(!tokens.length) { list.innerHTML='<div class="empty-state" style="padding:24px"><div class="empty-icon">✅</div><p>No waiting tokens</p></div>'; return; }
+    list.innerHTML=`<table><thead><tr><th>Token</th><th>Patient</th><th>Wait</th><th></th></tr></thead>
+      <tbody>${tokens.map(t=>`
+        <tr>
+          <td><span class="td-mono">#${t.token_number}</span></td>
+          <td style="font-weight:600;font-size:.85rem">${t.user?.name||'—'}</td>
+          <td style="font-size:.82rem;color:var(--c-ink-4)">~${t.estimated_time||0}m</td>
+          <td><button class="btn btn-primary btn-sm" onclick="document.getElementById('scanInput').value=${t.token_number};scanPatientById('${t.token_uid||t.id}')">Load</button></td>
+        </tr>`).join('')}
+      </tbody></table>`;
+  } catch(e) { showToast('Error',e.message,'error'); }
+}
+
+// ── Call next
+async function callNext() {
+  const dept = document.getElementById('deptFilter').value;
+  if(!dept) return showToast('Select department','','warning');
+  const btn = document.getElementById('nextBtn');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Calling…';
+  try {
+    const data = await apiCall('/next-token','POST',{department:dept});
+    if (!data.success || !data.token) {
+      showToast('Queue Empty', data.message || 'No waiting tokens in queue.', 'warning');
+      return;
+    }
+    document.getElementById('currentServing').textContent = `#${data.token.token_number}`;
+    showToast(`Token #${data.token.token_number} called`, data.token.user?.name||'', 'success');
+    loadQueue();
+
+    // ── AUTO LOAD PATIENT ──────────────────────────────────────────────────
+    // When next token is called, patient auto-loads in doctor panel
+    // ho jaata hai — doctor does not need manual scan or typing
+    // token_uid available ho toh woh use karo (most unique), else DB id
+    const calledToken = data.token;
+    const scanId = calledToken.token_uid || String(calledToken.id);
+    try {
+      const scanData = await apiCall(`/token-scan/${encodeURIComponent(scanId)}`);
+      renderPatient(scanData);
+      document.getElementById('patientSection').style.display = 'block';
+      document.getElementById('noPatientPlaceholder').style.display = 'none';
+      // show token number in scanInput (for info)
+      document.getElementById('scanInput').value = calledToken.token_number;
+      showToast('Patient auto-loaded', `${calledToken.user?.name || ''} — Token #${calledToken.token_number}`, 'info');
+    } catch(scanErr) {
+      // If auto-load fails, silently ignore — doctor manually scan kar sakta hai
+      console.warn('Auto-load patient failed:', scanErr.message);
+    }
+    // ── END AUTO LOAD ────────────────────────────────────────────────────────
+  } catch(e) { showToast('Error calling next token', e.message, 'error');
+  } finally { btn.disabled=false; btn.innerHTML='📢 Call Next Token'; }
+}
+
+loadMyProfile();
+setInterval(loadQueue, 20000);
+if(window.innerWidth<900) {
+  document.querySelector('.doc-grid')?.style.setProperty('grid-template-columns','1fr');
+  document.querySelector('.visit-form-grid')?.style.setProperty('grid-template-columns','1fr');
+}
+    </script>
+</body>
+
+</html>

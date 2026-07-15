@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Admin Panel — MediQueue</title>
+    <link rel="stylesheet" href="style.css" />
+    <style>
+        /* ── Table fix ── */
+        
+        #userList table {
+            width: 100%;
+            table-layout: fixed;
+            border-collapse: collapse;
+        }
+        
+        #userList thead th {
+            font-size: .75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--c-border, #e5e7eb);
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        
+        #userList tbody td {
+            padding: 10px 12px;
+            vertical-align: middle;
+            border-bottom: 1px solid var(--c-border, #f3f4f6);
+            font-size: .85rem;
+        }
+        
+        .col-name {
+            width: 18%;
+        }
+        
+        .col-email {
+            width: 24%;
+        }
+        
+        .col-role {
+            width: 11%;
+        }
+        
+        .col-auth {
+            width: 10%;
+        }
+        
+        .col-status {
+            width: 10%;
+        }
+        
+        .col-actions {
+            width: 27%;
+        }
+        
+        .cell-name {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+        
+        .cell-name span {
+            font-weight: 600;
+            font-size: .88rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .cell-name img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+        
+        .cell-email {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--c-ink-3, #6b7280);
+        }
+        
+        .cell-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            align-items: flex-start;
+        }
+        
+        .cell-actions .btn {
+            white-space: nowrap;
+        }
+        
+        .cell-actions select.form-control {
+            width: 100%;
+            padding: 4px 8px;
+            font-size: .76rem;
+        }
+        /* ── User group accordions ── */
+        
+        .user-group {
+            border: 1px solid var(--c-border);
+            border-radius: var(--r-lg);
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        
+        .user-group-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 13px 16px;
+            cursor: pointer;
+            user-select: none;
+            background: var(--c-surface2);
+            transition: background .15s;
+        }
+        
+        .user-group-head:hover {
+            background: var(--c-surface);
+        }
+        
+        .gh-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .gh-title {
+            font-weight: 700;
+            font-size: .88rem;
+        }
+        
+        .gh-count {
+            font-size: .7rem;
+            font-weight: 700;
+            padding: 2px 9px;
+            border-radius: 99px;
+            background: var(--c-primary-lt);
+            color: var(--c-primary-dk);
+        }
+        
+        .gh-arrow {
+            font-size: .65rem;
+            transition: transform .2s;
+            color: var(--c-ink-4);
+        }
+        
+        .user-group-head.open .gh-arrow {
+            transform: rotate(180deg);
+        }
+        
+        .user-group-body {
+            display: none;
+        }
+        
+        .user-group-body.open {
+            display: block;
+        }
+        
+        .ug-search {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--c-border);
+            background: var(--c-surface2);
+        }
+        
+        .ug-search input {
+            width: 100%;
+            padding: 6px 10px;
+            border-radius: var(--r-md);
+            border: 1px solid var(--c-border);
+            font-size: .82rem;
+            background: var(--c-bg);
+            color: var(--c-ink);
+        }
+        
+        .ug-search input:focus {
+            outline: none;
+            border-color: var(--c-primary-mid);
+        }
+        /* ── Dept settings cards — overflow fix ── */
+        
+        .dept-setting-card {
+            background: var(--c-bg);
+            border: 1px solid var(--c-border);
+            border-radius: var(--r-lg);
+            padding: 16px;
+            border-top-width: 3px;
+            min-width: 0;
+            box-sizing: border-box;
+        }
+        /* ── Doctor rows ── */
+        
+        .doctor-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--c-border);
+            font-size: .84rem;
+        }
+        
+        .doctor-row:last-child {
+            border-bottom: none;
+        }
+        /* ── Modal ── */
+        
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .45);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        
+        .modal-backdrop.show {
+            display: flex;
+        }
+        
+        .modal-box {
+            background: var(--c-bg);
+            border-radius: var(--r-lg);
+            padding: 28px;
+            width: 100%;
+            max-width: 460px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, .25);
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 14px;
+            right: 16px;
+            background: none;
+            border: none;
+            font-size: 1rem;
+            cursor: pointer;
+            color: var(--c-ink-3);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleMobileSidebar()"></div>
+    <aside class="sidebar" id="sidebar"></aside>
+    <nav class="navbar" id="navbar"></nav>
+
+    <!-- ── Edit Doctor Modal ── -->
+    <div class="modal-backdrop" id="editDoctorModal">
+        <div class="modal-box">
+            <button class="modal-close" onclick="closeModal('editDoctorModal')">✕</button>
+            <h4 style="margin-bottom:16px">✏️ Edit Doctor</h4>
+            <input type="hidden" id="editDoctorId" />
+            <div style="display:flex;flex-direction:column;gap:12px">
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <input class="form-control" id="editDoctorName" placeholder="Dr. Anjali Sharma" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Department</label>
+                    <select class="form-control" id="editDoctorDept"></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Specialization</label>
+                    <input class="form-control" id="editDoctorSpec" placeholder="e.g. Cardiologist" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Room Number</label>
+                    <input class="form-control" id="editDoctorRoom" placeholder="e.g. OPD-101" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Available Days</label>
+                    <input class="form-control" id="editDoctorDays" placeholder="Mon,Tue,Wed,Thu,Fri" />
+                </div>
+                <div id="editDoctorError" style="display:none;padding:8px 12px;background:var(--red-100);border-radius:var(--r-md);font-size:.82rem;color:#b91c1c"></div>
+                <button class="btn btn-primary btn-full" onclick="saveEditDoctor()">💾 Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Add Department Modal ── -->
+    <!-- Edit Staff Modal -->
+    <div class="modal-backdrop" id="editStaffModal">
+        <div class="modal" style="max-width:480px">
+            <button class="modal-close" onclick="closeModal('editStaffModal')">✕</button>
+            <h3 style="margin-bottom:18px">✏️ Edit Staff Member</h3>
+            <input type="hidden" id="editStaffId" />
+            <div style="display:flex;flex-direction:column;gap:14px">
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <input class="form-control" id="editStaffName" placeholder="Dr. Name" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Phone</label>
+                    <input class="form-control" id="editStaffPhone" placeholder="+91 98765 43210" />
+                </div>
+                <div id="editStaffDoctorFields" style="display:none;flex-direction:column;gap:14px">
+                    <div class="form-group">
+                        <label class="form-label">Department</label>
+                        <select class="form-control" id="editStaffDept">
+                            <option value="General">General</option>
+                            <option value="ENT">ENT</option>
+                            <option value="Cardiology">Cardiology</option>
+                            <option value="Orthopedics">Orthopedics</option>
+                            <option value="Pediatrics">Pediatrics</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Specialization</label>
+                        <input class="form-control" id="editStaffSpec" placeholder="e.g. Cardiologist" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Room Number</label>
+                        <input class="form-control" id="editStaffRoom" placeholder="e.g. OPD-101" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Available Days</label>
+                        <input class="form-control" id="editStaffDays" placeholder="Mon,Tue,Wed,Thu,Fri" />
+                    </div>
+                </div>
+                <div id="editStaffError" style="display:none;padding:8px 12px;background:var(--red-100);border-radius:var(--r-md);font-size:.82rem;color:#b91c1c"></div>
+                <button class="btn btn-primary btn-full" onclick="saveEditStaff()">💾 Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="addDeptModal">
+        <div class="modal-box">
+            <button class="modal-close" onclick="closeModal('addDeptModal')">✕</button>
+            <h4 style="margin-bottom:16px">🏥 Add New Department</h4>
+            <div style="display:flex;flex-direction:column;gap:12px">
+                <div class="form-group">
+                    <label class="form-label">Department Name</label>
+                    <input class="form-control" id="newDeptName" placeholder="e.g. Neurology" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Max Tokens / Day</label>
+                    <input class="form-control" type="number" id="newDeptMax" value="60" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Avg. Min / Patient</label>
+                    <input class="form-control" type="number" id="newDeptAvg" value="10" />
+                </div>
+                <div id="addDeptError" style="display:none;padding:8px 12px;background:var(--red-100);border-radius:var(--r-md);font-size:.82rem;color:#b91c1c"></div>
+                <button class="btn btn-primary btn-full" onclick="saveNewDept()">➕ Add Department</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-layout">
+        <div class="main-content">
+            <div class="page-header slide-up">
+                <h1>🛠️ Administrator Panel</h1>
+                <p>Manage staff accounts, roles, departments and system access.</p>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-grid stagger" style="grid-template-columns:repeat(4,1fr);margin-bottom:28px">
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-blue">👥</div>
+                    <div class="stat-value" id="sTotal">—</div>
+                    <div class="stat-label">Total Users</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-green">🧑‍⚕️</div>
+                    <div class="stat-value" id="sDoctors">—</div>
+                    <div class="stat-label">Doctors</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-purple">🏪</div>
+                    <div class="stat-value" id="sPharmacy">—</div>
+                    <div class="stat-label">Pharmacy Staff</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-yellow">🏥</div>
+                    <div class="stat-value" id="sPatients">—</div>
+                    <div class="stat-label">Patients</div>
+                </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 360px;gap:24px;align-items:start" class="admin-grid">
+
+                <!-- LEFT col -->
+                <div style="display:flex;flex-direction:column;gap:20px">
+
+                    <!-- User Groups -->
+                    <div class="table-wrapper">
+                        <div class="table-header">
+                            <h3>All System Users</h3>
+                            <button class="btn btn-primary btn-sm" onclick="showCreateForm()">+ Create Staff</button>
+                        </div>
+
+                        <!-- Patients -->
+                        <div class="user-group">
+                            <div class="user-group-head" onclick="toggleGroup('patient')">
+                                <div class="gh-left"><span>🧑‍💼</span><span class="gh-title">Patients</span><span class="gh-count" id="cnt-patient">0</span></div>
+                                <span class="gh-arrow">▼</span>
+                            </div>
+                            <div class="user-group-body" id="body-patient">
+                                <div class="ug-search"><input type="text" placeholder="🔍 Search by name or email…" oninput="filterGroup('patient',this.value)" /></div>
+                                <div id="table-patient"></div>
+                            </div>
+                        </div>
+
+                        <!-- Doctors -->
+                        <div class="user-group">
+                            <div class="user-group-head" onclick="toggleGroup('doctor')">
+                                <div class="gh-left"><span>⚕️</span><span class="gh-title">Doctors</span><span class="gh-count" id="cnt-doctor">0</span></div>
+                                <span class="gh-arrow">▼</span>
+                            </div>
+                            <div class="user-group-body" id="body-doctor">
+                                <div class="ug-search"><input type="text" placeholder="🔍 Search doctors…" oninput="filterGroup('doctor',this.value)" /></div>
+                                <div id="table-doctor"></div>
+                            </div>
+                        </div>
+
+                        <!-- Pharmacy -->
+                        <div class="user-group">
+                            <div class="user-group-head" onclick="toggleGroup('medicine_staff')">
+                                <div class="gh-left"><span>🏪</span><span class="gh-title">Pharmacy Staff</span><span class="gh-count" id="cnt-medicine_staff">0</span></div>
+                                <span class="gh-arrow">▼</span>
+                            </div>
+                            <div class="user-group-body" id="body-medicine_staff">
+                                <div class="ug-search"><input type="text" placeholder="🔍 Search pharmacy staff…" oninput="filterGroup('medicine_staff',this.value)" /></div>
+                                <div id="table-medicine_staff"></div>
+                            </div>
+                        </div>
+
+                        <!-- Admins -->
+                        <div class="user-group">
+                            <div class="user-group-head" onclick="toggleGroup('admin')">
+                                <div class="gh-left"><span>🛠️</span><span class="gh-title">Administrators</span><span class="gh-count" id="cnt-admin">0</span></div>
+                                <span class="gh-arrow">▼</span>
+                            </div>
+                            <div class="user-group-body" id="body-admin">
+                                <div class="ug-search"><input type="text" placeholder="🔍 Search admins…" oninput="filterGroup('admin',this.value)" /></div>
+                                <div id="table-admin"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Doctor Management -->
+                    <div class="table-wrapper">
+                        <div class="table-header">
+                            <h3>👨‍⚕️ Doctor Management</h3>
+                            <button class="btn btn-primary btn-sm" onclick="openAddDoctorForm()">+ Add Doctor</button>
+                        </div>
+                        <div id="doctorList">
+                            <div class="empty-state" style="padding:24px">
+                                <div class="spinner spinner-blue"></div>
+                                <p>Loading…</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <!-- /LEFT -->
+
+                <!-- RIGHT col -->
+                <div style="display:flex;flex-direction:column;gap:16px">
+                    <div class="card card-xl" id="createStaffCard">
+                        <h4 style="margin-bottom:4px">➕ Create Staff Account</h4>
+                        <p style="font-size:.82rem;margin-bottom:16px">Only admin can create doctor and pharmacy staff accounts.</p>
+                        <div style="display:flex;flex-direction:column;gap:12px">
+                            <div class="form-group">
+                                <label class="form-label">Full Name</label>
+                                <input class="form-control" id="sName" placeholder="Dr. Anjali Sharma" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Email Address</label>
+                                <input class="form-control" id="sEmail" type="email" placeholder="doctor@hospital.com" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Role</label>
+                                <select class="form-control" id="sRole" onchange="toggleDoctorFields()">
+                <option value="doctor">Doctor</option>
+                <option value="medicine_staff">Pharmacy Staff</option>
+                <option value="admin">Administrator</option>
+              </select>
+                            </div>
+                            <div id="doctorFields">
+                                <div class="form-group" style="margin-bottom:12px">
+                                    <label class="form-label">Department</label>
+                                    <select class="form-control" id="sDept">
+                  <option value="General">General</option>
+                  <option value="ENT">ENT</option>
+                  <option value="Cardiology">Cardiology</option>
+                  <option value="Orthopedics">Orthopedics</option>
+                  <option value="Pediatrics">Pediatrics</option>
+                </select>
+                                </div>
+                                <div class="form-group" style="margin-bottom:12px">
+                                    <label class="form-label">Specialization</label>
+                                    <input class="form-control" id="sSpecialization" placeholder="e.g. General Physician" />
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Room Number</label>
+                                    <input class="form-control" id="sRoom" placeholder="e.g. OPD-101" />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Phone (optional)</label>
+                                <input class="form-control" id="sPhone" placeholder="+91 98765 43210" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Temporary Password</label>
+                                <input class="form-control" id="sPassword" type="text" placeholder="Set a temporary password" />
+                            </div>
+                            <div id="staffError" style="display:none;padding:10px;background:var(--red-100);border-radius:var(--r-md);font-size:.82rem;color:#b91c1c"></div>
+                            <button class="btn btn-primary btn-full" onclick="createStaff()">Create Account</button>
+                        </div>
+                    </div>
+
+                    <div class="card" style="background:linear-gradient(135deg,var(--c-primary),var(--c-primary));color:#fff">
+                        <h4 style="color:#fff;margin-bottom:12px">🔐 Access Control</h4>
+                        <div style="display:flex;flex-direction:column;gap:8px;font-size:.83rem;opacity:.9">
+                            <div style="display:flex;align-items:center;gap:8px"><span>🧑‍💼</span> <b>Patient</b> — Self-registered via public form</div>
+                            <div style="display:flex;align-items:center;gap:8px"><span>⚕️</span> <b>Doctor</b> — Created by admin only</div>
+                            <div style="display:flex;align-items:center;gap:8px"><span>🏪</span> <b>Pharmacy</b> — Created by admin only</div>
+                            <div style="display:flex;align-items:center;gap:8px"><span>🛠️</span> <b>Admin</b> — Full system access</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- /RIGHT -->
+            </div>
+
+            <!-- ── Dept Capacity Settings ── -->
+            <div style="margin-top:32px">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+                    <div>
+                        <h3 style="font-size:1rem;font-weight:700">⚙️ Department Capacity Settings</h3>
+                        <p style="font-size:.82rem;color:var(--c-ink-3);margin-top:2px">Set max daily tokens and average consultation time per department.</p>
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="openModal('addDeptModal')">+ Add Department</button>
+                </div>
+                <div style="overflow-x:auto">
+                    <div id="deptSettingsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;min-width:0">
+                        <div class="empty-state" style="grid-column:1/-1;padding:30px">
+                            <div class="spinner spinner-blue"></div>
+                            <p>Loading settings…</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+    <script src="script.js"></script>
+    <script>
+        if (!requireAuth(['admin'])) throw '';
+        const user = getUser();
+        document.getElementById('sidebar').innerHTML = buildSidebar('admin');
+        document.getElementById('navbar').innerHTML = buildNavbar('Administrator Panel', 'User & access management');
+
+        let allUsers = [];
+        let allDoctors = [];
+
+        const ROLE_COLORS = {
+            patient: 'badge-blue',
+            doctor: 'badge-green',
+            admin: 'badge-red',
+            medicine_staff: 'badge-purple'
+        };
+        const ROLE_LABELS = {
+            patient: 'Patient',
+            doctor: 'Doctor',
+            admin: 'Admin',
+            medicine_staff: 'Pharmacy'
+        };
+        const DEPT_ICONS = {
+            General: '🏥',
+            ENT: '👂',
+            Cardiology: '❤️',
+            Orthopedics: '🦴',
+            Pediatrics: '👶'
+        };
+        const DEPT_COLORS = {
+            General: '#2563eb',
+            ENT: '#7c3aed',
+            Cardiology: '#dc2626',
+            Orthopedics: '#d97706',
+            Pediatrics: '#059669'
+        };
+        const DEPT_DESCS = {
+            General: 'General OPD',
+            ENT: 'Ear, Nose & Throat',
+            Cardiology: 'Heart & Vascular',
+            Orthopedics: 'Bone & Joint',
+            Pediatrics: 'Children'
+        };
+
+        // ── Modal helpers ────────────────────────────────────────────
+        function openModal(id) {
+            document.getElementById(id).classList.add('show');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('show');
+        }
+
+        // ── Toggle doctor fields ────────────────────────────────────
+        function toggleDoctorFields() {
+            const role = document.getElementById('sRole').value;
+            const df = document.getElementById('doctorFields');
+            if (df) df.style.display = role === 'doctor' ? 'block' : 'none';
+        }
+
+        // ── Accordion ───────────────────────────────────────────────
+        function toggleGroup(role) {
+            const heads = document.querySelectorAll('.user-group-head');
+            heads.forEach(h => {
+                const body = h.nextElementSibling;
+                if (h.closest('.user-group') === document.querySelector(`#body-${role}`)?.closest('.user-group')) {
+                    h.classList.toggle('open');
+                    body.classList.toggle('open');
+                }
+            });
+        }
+
+        // ── Build user table HTML ────────────────────────────────────
+        function buildUserTable(users) {
+            if (!users.length) return `<div style="padding:18px;text-align:center;color:var(--c-ink-4);font-size:.83rem">No users found</div>`;
+            return `<table>
+    <thead><tr>
+      <th class="col-name">Name</th><th class="col-email">Email</th>
+      <th class="col-role">Role</th><th class="col-auth">Auth</th>
+      <th class="col-status">Status</th><th class="col-actions">Actions</th>
+    </tr></thead>
+    <tbody>${users.map(u => `
+      <tr>
+        <td class="col-name"><div class="cell-name">
+          <img src="${u.photo_url||`https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=2563eb&color=fff&size=64`}" alt=""/>
+          <span title="${u.name}">${u.name}</span>
+        </div></td>
+        <td class="col-email"><span class="cell-email" title="${u.email}">${u.email}</span></td>
+        <td class="col-role"><span class="badge ${ROLE_COLORS[u.role]||'badge-gray'}">${ROLE_LABELS[u.role]||u.role}</span></td>
+        <td class="col-auth"><span class="badge ${u.auth_provider==='google'?'badge-blue':'badge-gray'}">${u.auth_provider==='google'?'Google':'Email'}</span></td>
+        <td class="col-status"><span class="badge ${u.is_active?'badge-green':'badge-red'}">${u.is_active?'Active':'Inactive'}</span></td>
+        <td class="col-actions">${u.id !== user.id ? `
+          <div class="cell-actions">
+            ${['doctor','medicine_staff'].includes(u.role) ? `<button class="btn btn-outline btn-sm" onclick="openEditStaff(${u.id})">✏️ Edit</button>` : ''}
+            <button class="btn btn-outline btn-sm" onclick="toggleActive(${u.id},${u.is_active})">${u.is_active?'Deactivate':'Activate'}</button>
+            <select onchange="changeRole(${u.id},this.value)" class="form-control">
+              <option value="">Change role…</option>
+              <option value="patient">Patient</option><option value="doctor">Doctor</option>
+              <option value="medicine_staff">Pharmacy</option><option value="admin">Admin</option>
+            </select>
+          </div>` : '<span style="font-size:.78rem;color:var(--c-ink-4)">You</span>'}
+        </td>
+      </tr>`).join('')}
+    </tbody></table>`;
+}
+
+// ── Filter group by search ───────────────────────────────────
+function filterGroup(role, query) {
+  const users = allUsers.filter(u => u.role === role);
+  const q = query.toLowerCase();
+  const filtered = q ? users.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)) : users;
+  document.getElementById(`table-${role}`).innerHTML = buildUserTable(filtered);
+}
+
+// ── Load users (grouped) ─────────────────────────────────────
+async function loadUsers() {
+  try {
+    const data = await apiCall('/admin/users');
+    allUsers = data.users || [];
+    document.getElementById('sTotal').textContent    = allUsers.length;
+    document.getElementById('sDoctors').textContent  = allUsers.filter(u=>u.role==='doctor').length;
+    document.getElementById('sPharmacy').textContent = allUsers.filter(u=>u.role==='medicine_staff').length;
+    document.getElementById('sPatients').textContent = allUsers.filter(u=>u.role==='patient').length;
+    ['patient','doctor','medicine_staff','admin'].forEach(role => {
+      const group = allUsers.filter(u => u.role === role);
+      document.getElementById(`cnt-${role}`).textContent = group.length;
+      document.getElementById(`table-${role}`).innerHTML = buildUserTable(group);
+    });
+  } catch(e) { showToast('Error', e.message, 'error'); }
+}
+
+async function toggleActive(id, current) {
+  try {
+    await apiCall(`/admin/users/${id}`,'PATCH',{ is_active:!current });
+    showToast('Updated', current?'Account deactivated.':'Account activated.','success');
+    loadUsers();
+  } catch(e) { showToast('Error',e.message,'error'); }
+}
+
+async function changeRole(id, role) {
+  if (!role) return;
+  if (!confirm(`Change this user's role to "${role}"?`)) return;
+  try {
+    await apiCall(`/admin/users/${id}`,'PATCH',{ role });
+    showToast('Role updated',`Role changed to ${role}.`,'success');
+    loadUsers();
+  } catch(e) { showToast('Error',e.message,'error'); }
+}
+
+// ── Create staff ─────────────────────────────────────────────
+async function createStaff() {
+  const el = document.getElementById('staffError');
+  el.style.display = 'none';
+  const name=document.getElementById('sName').value.trim(),
+        email=document.getElementById('sEmail').value.trim(),
+        role=document.getElementById('sRole').value,
+        phone=document.getElementById('sPhone').value.trim(),
+        password=document.getElementById('sPassword').value;
+  if (!name||!email||!password) { el.textContent='Name, email and password are required.'; el.style.display='block'; return; }
+  if (password.length<6) { el.textContent='Password must be at least 6 characters.'; el.style.display='block'; return; }
+  showLoading('Creating account…');
+  try {
+    const dept=document.getElementById('sDept')?.value,
+          spec=document.getElementById('sSpecialization')?.value,
+          room=document.getElementById('sRoom')?.value;
+    await apiCall('/admin/create-staff','POST',{
+      name,email,role,phone,password,
+      department:role==='doctor'?dept:undefined,
+      specialization:role==='doctor'?spec:undefined,
+      room_number:role==='doctor'?room:undefined,
+    });
+    hideLoading();
+    showToast('Account created!',`${role} account for ${name}`,'success');
+    ['sName','sEmail','sPhone','sPassword','sSpecialization','sRoom'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+    loadUsers(); loadDoctors();
+  } catch(e) { hideLoading(); el.textContent=e.message; el.style.display='block'; }
+}
+
+function showCreateForm() {
+  document.getElementById('createStaffCard').scrollIntoView({ behavior:'smooth' });
+  setTimeout(()=>document.getElementById('sName').focus(), 400);
+}
+
+function openAddDoctorForm() {
+  document.getElementById('sRole').value = 'doctor';
+  toggleDoctorFields();
+  showCreateForm();
+}
+
+// ── Doctor management ────────────────────────────────────────
+async function loadDoctors() {
+  try {
+    const data = await apiCall('/admin/doctors');
+    allDoctors = data.doctors || [];
+    renderDoctors(allDoctors);
+    // Sync dept dropdowns
+    const depts = [...new Set(['General','ENT','Cardiology','Orthopedics','Pediatrics',...allDoctors.map(d=>d.department)])];
+    ['editDoctorDept','sDept'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const cur = el.value;
+      el.innerHTML = depts.map(d=>`<option value="${d}">${d}</option>`).join('');
+      if (cur) el.value = cur;
+    });
+  } catch(e) { showToast('Error loading doctors',e.message,'error'); }
+}
+
+function renderDoctors(doctors) {
+  const el = document.getElementById('doctorList');
+  if (!doctors.length) {
+    el.innerHTML = `<div class="empty-state" style="padding:24px"><div class="empty-icon">👨‍⚕️</div><h4>No doctors added yet</h4></div>`;
+    return;
+  }
+  el.innerHTML = doctors.map(d => `
+    <div class="doctor-row">
+      <img src="${d.photo_url||`https://ui-avatars.com/api/?name=${encodeURIComponent(d.name)}&background=2563eb&color=fff&size=64`}"
+        style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0" alt=""/>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.name}</div>
+        <div style="font-size:.74rem;color:var(--c-ink-3)">${d.specialization||d.department} · ${d.room_number||'—'}</div>
+      </div>
+      <span class="badge badge-${d.is_active?'green':'red'}" style="flex-shrink:0">${d.is_active?'Active':'Inactive'}</span>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn btn-outline btn-sm" onclick="openEditDoctor(${d.id})">✏️ Edit</button>
+        <button class="btn btn-outline btn-sm" style="color:#dc2626;border-color:#fca5a5"
+          onclick="removeDoctor(${d.id},'${d.name.replace(/'/g,"\\'")}')">🗑️</button>
+      </div>
+    </div>`).join('');
+}
+
+function openEditDoctor(id) {
+  const doc = allDoctors.find(d => d.id === id);
+  if (!doc) return;
+  document.getElementById('editDoctorId').value   = id;
+  document.getElementById('editDoctorName').value = doc.name;
+  document.getElementById('editDoctorSpec').value = doc.specialization||'';
+  document.getElementById('editDoctorRoom').value = doc.room_number||'';
+  document.getElementById('editDoctorDays').value = doc.available_days||'Mon,Tue,Wed,Thu,Fri';
+  document.getElementById('editDoctorDept').value = doc.department;
+  document.getElementById('editDoctorError').style.display = 'none';
+  openModal('editDoctorModal');
+}
+
+async function saveEditDoctor() {
+  const errEl = document.getElementById('editDoctorError');
+  errEl.style.display = 'none';
+  const id=document.getElementById('editDoctorId').value,
+        name=document.getElementById('editDoctorName').value.trim(),
+        dept=document.getElementById('editDoctorDept').value,
+        spec=document.getElementById('editDoctorSpec').value.trim(),
+        room=document.getElementById('editDoctorRoom').value.trim(),
+        days=document.getElementById('editDoctorDays').value.trim();
+  if (!name) { errEl.textContent='Name is required.'; errEl.style.display='block'; return; }
+  try {
+    await apiCall(`/admin/doctors/${id}`,'PATCH',{ name,department:dept,specialization:spec,room_number:room,available_days:days });
+    showToast('Doctor updated',`${name}'s details saved.`,'success');
+    closeModal('editDoctorModal');
+    loadDoctors(); loadUsers();
+  } catch(e) { errEl.textContent=e.message; errEl.style.display='block'; }
+}
+
+async function removeDoctor(id, name) {
+  if (!confirm(`Remove Dr. ${name}? This cannot be undone.`)) return;
+  try {
+    await apiCall(`/admin/doctors/${id}`,'DELETE');
+    showToast('Doctor removed',`${name} removed.`,'success');
+    loadDoctors(); loadUsers();
+  } catch(e) { showToast('Error',e.message,'error'); }
+}
+
+// ── Dept Settings ────────────────────────────────────────────
+async function loadDeptSettings() {
+  try {
+    const data = await apiCall('/dept-settings');
+    const settings = data.settings || [];
+    const grid = document.getElementById('deptSettingsGrid');
+    if (!settings.length) {
+      grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><p>No settings found.</p></div>';
+      return;
+    }
+    grid.innerHTML = settings.map(s => `
+      <div class="dept-setting-card" style="border-top-color:${DEPT_COLORS[s.department]||'#6b7280'}">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <span style="font-size:20px">${DEPT_ICONS[s.department]||'🏥'}</span>
+          <div style="min-width:0">
+            <div style="font-weight:700;font-size:.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.department}</div>
+            <div style="font-size:.7rem;color:var(--c-ink-4)">${DEPT_DESCS[s.department]||s.department}</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:9px">
+          <div class="form-group" style="margin:0">
+            <label class="form-label" style="font-size:.72rem">Max Tokens / Day</label>
+            <input class="form-control" type="number" min="1" max="500"
+              id="maxTok_${s.department}" value="${s.max_tokens_per_day}"
+              style="font-size:.84rem;padding:5px 8px"
+              onchange="saveDeptSetting('${s.department}')"/>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label" style="font-size:.72rem">Avg. Min / Patient</label>
+            <input class="form-control" type="number" min="1" max="120"
+              id="avgMin_${s.department}" value="${s.avg_minutes_per_patient}"
+              style="font-size:.84rem;padding:5px 8px"
+              onchange="saveDeptSetting('${s.department}')"/>
+          </div>
+          <div id="settingMsg_${s.department}" style="font-size:.72rem;min-height:14px;color:#15803d"></div>
+        </div>
+      </div>`).join('');
+  } catch(e) { showToast('Error loading dept settings',e.message,'error'); }
+}
+
+async function saveDeptSetting(dept) {
+  const maxTok=parseInt(document.getElementById(`maxTok_${dept}`).value);
+  const avgMin=parseInt(document.getElementById(`avgMin_${dept}`).value);
+  const msgEl=document.getElementById(`settingMsg_${dept}`);
+  if (!maxTok||!avgMin||maxTok<1||avgMin<1) { msgEl.style.color='#b91c1c'; msgEl.textContent='⚠️ Invalid'; return; }
+  try {
+    await apiCall(`/dept-settings/${dept}`,'PATCH',{ max_tokens_per_day:maxTok, avg_minutes_per_patient:avgMin });
+    msgEl.style.color='#15803d'; msgEl.textContent='✅ Saved!';
+    setTimeout(()=>msgEl.textContent='',2000);
+  } catch(e) { msgEl.style.color='#b91c1c'; msgEl.textContent='❌ '+e.message; }
+}
+
+async function saveNewDept() {
+  const errEl=document.getElementById('addDeptError');
+  errEl.style.display='none';
+  const name=document.getElementById('newDeptName').value.trim(),
+        maxTok=parseInt(document.getElementById('newDeptMax').value),
+        avgMin=parseInt(document.getElementById('newDeptAvg').value);
+  if (!name) { errEl.textContent='Department name required.'; errEl.style.display='block'; return; }
+  if (!maxTok||!avgMin) { errEl.textContent='Max tokens and avg time required.'; errEl.style.display='block'; return; }
+  try {
+    await apiCall('/dept-settings','POST',{ department:name, max_tokens_per_day:maxTok, avg_minutes_per_patient:avgMin });
+    showToast('Department added',`${name} added.`,'success');
+    closeModal('addDeptModal');
+    document.getElementById('newDeptName').value='';
+    loadDeptSettings();
+  } catch(e) { errEl.textContent=e.message; errEl.style.display='block'; }
+}
+
+
+// ── Edit Staff (doctor / medicine_staff) ─────────────────────
+function openEditStaff(id) {
+  const u = allUsers.find(u => u.id === id);
+  if (!u) return;
+  document.getElementById('editStaffId').value   = id;
+  document.getElementById('editStaffName').value = u.name;
+  document.getElementById('editStaffPhone').value = u.phone || '';
+  const doctorFields = document.getElementById('editStaffDoctorFields');
+  if (u.role === 'doctor') {
+    doctorFields.style.display = 'flex';
+    // Try to find matching doctor entry for extra fields
+    const doc = allDoctors.find(d => d.name === u.name);
+    document.getElementById('editStaffDept').value  = doc?.department || 'General';
+    document.getElementById('editStaffSpec').value  = doc?.specialization || '';
+    document.getElementById('editStaffRoom').value  = doc?.room_number || '';
+    document.getElementById('editStaffDays').value  = doc?.available_days || 'Mon,Tue,Wed,Thu,Fri';
+  } else {
+    doctorFields.style.display = 'none';
+  }
+  document.getElementById('editStaffError').style.display = 'none';
+  openModal('editStaffModal');
+}
+
+async function saveEditStaff() {
+  const errEl = document.getElementById('editStaffError');
+  errEl.style.display = 'none';
+  const id    = document.getElementById('editStaffId').value;
+  const name  = document.getElementById('editStaffName').value.trim();
+  const phone = document.getElementById('editStaffPhone').value.trim();
+  const u = allUsers.find(u => u.id == id);
+  if (!name) { errEl.textContent = 'Name is required.'; errEl.style.display = 'block'; return; }
+  try {
+    // Update User record
+    await apiCall(`/admin/users/${id}`, 'PATCH', { name, phone });
+
+    // If doctor, also update Doctor table entry
+    if (u && u.role === 'doctor') {
+      const dept = document.getElementById('editStaffDept').value;
+      const spec = document.getElementById('editStaffSpec').value.trim();
+      const room = document.getElementById('editStaffRoom').value.trim();
+      const days = document.getElementById('editStaffDays').value.trim();
+      const doc  = allDoctors.find(d => d.name === u.name);
+      if (doc) {
+        await apiCall(`/admin/doctors/${doc.id}`, 'PATCH', { name, department: dept, specialization: spec, room_number: room, available_days: days });
+      }
+    }
+
+    showToast('Updated!', `${name}'s details saved.`, 'success');
+    closeModal('editStaffModal');
+    loadUsers(); loadDoctors();
+  } catch(e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
+}
+
+// ── Init ─────────────────────────────────────────────────────
+loadUsers();
+loadDoctors();
+loadDeptSettings();
+if (window.innerWidth<768) document.querySelector('.admin-grid')?.style.setProperty('grid-template-columns','1fr');
+    </script>
+</body>
+
+</html>

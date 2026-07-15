@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Appointment — MediQueue</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleMobileSidebar()"></div>
+    <aside class="sidebar" id="sidebar"></aside>
+    <nav class="navbar" id="navbar"></nav>
+
+    <div class="app-layout">
+        <div class="main-content">
+            <div class="page-header slide-up">
+                <div class="breadcrumb"><a href="dashboard.html">Home</a> › Appointment</div>
+                <h1>📅 Book Appointment</h1>
+                <p>Select department, date &amp; doctor. You'll get a token number — no fixed time needed.</p>
+            </div>
+
+            <!-- Step indicator -->
+            <div style="display:flex;gap:0;margin-bottom:28px;" class="slide-up" id="stepBar">
+                <div class="step-item active" id="step1bar" style="flex:1;text-align:center;padding:12px;background:linear-gradient(135deg,var(--c-primary),var(--c-primary-mid));border-radius:var(--r-md) 0 0 var(--r-md);color:#fff;font-size:.85rem;font-weight:600">
+                    1 · Select Dept &amp; Date
+                </div>
+                <div class="step-item" id="step2bar" style="flex:1;text-align:center;padding:12px;background:var(--c-surface2);color:var(--c-ink-3);font-size:.85rem;font-weight:600">
+                    2 · Choose Doctor
+                </div>
+                <div class="step-item" id="step3bar" style="flex:1;text-align:center;padding:12px;background:var(--c-surface2);color:var(--c-ink-3);font-size:.85rem;font-weight:600;border-radius:0 var(--r-md) var(--r-md) 0">
+                    3 · Confirm &amp; Token
+                </div>
+            </div>
+
+            <!-- STEP 1: Department + Date -->
+            <div id="step1" class="slide-up">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px" class="appt-grid">
+                    <div class="card card-xl">
+                        <h3 style="margin-bottom:16px">Select Department</h3>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="deptGrid"></div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:16px">
+                        <div class="card">
+                            <h3 style="margin-bottom:14px">📆 Select Date</h3>
+                            <div class="form-group">
+                                <label class="form-label">Appointment Date</label>
+                                <input class="form-control" type="date" id="apptDate" onchange="onDateChange()" />
+                            </div>
+                            <!-- Booking window info -->
+                            <div style="margin-top:10px;padding:10px;background:var(--c-primary-lt);border-radius:var(--r-md);font-size:.78rem;color:var(--c-primary-dk)">
+                                📌 Tokens open at <b>12:00 AM</b> for the next day onwards. Last booking for any date is <b>12:00 PM (noon)</b> of that date. You can book up to <b>1 month</b> in advance.
+                            </div>
+                            <div style="margin-top:10px;padding:10px;border-radius:var(--r-md);display:none" id="dateInfo">
+                                <div style="font-size:.82rem;font-weight:500" id="dateInfoText"></div>
+                            </div>
+                            <!-- Slot availability indicator -->
+                            <div id="slotInfo" style="display:none;margin-top:10px;padding:10px;border-radius:var(--r-md);font-size:.82rem;font-weight:500"></div>
+                        </div>
+                        <div class="card" style="background:linear-gradient(135deg,var(--c-primary-lt),rgba(239,246,255,.6))">
+                            <h4 style="margin-bottom:10px;color:var(--c-primary-dk)">ℹ️ How tokens work</h4>
+                            <p style="font-size:.82rem;color:var(--c-primary-dk);line-height:1.6">
+                                You book for a <b>date</b>, not a fixed time. On the day, you get a token number. Check your estimated wait time on the token page and come to hospital accordingly.
+                            </p>
+                        </div>
+                        <button class="btn btn-primary btn-lg btn-full" id="toStep2Btn" onclick="goStep2()" disabled>
+                            Next: Choose Doctor →
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 2: Doctor selection -->
+            <div id="step2" style="display:none">
+                <div class="card card-xl slide-up">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                        <h3>👨‍⚕️ Select Doctor</h3>
+                        <button class="btn btn-ghost btn-sm" onclick="goStep1()">← Back</button>
+                    </div>
+
+                    <!-- Slot availability for selected dept + date -->
+                    <div id="deptSlotBanner" style="display:none;margin-bottom:14px;padding:10px 14px;border-radius:var(--r-md);font-size:.82rem;font-weight:500"></div>
+
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px" id="doctorGrid">
+                        <div class="empty-state" style="padding:30px;grid-column:1/-1">
+                            <div class="spinner spinner-blue"></div>
+                            <p>Loading doctors…</p>
+                        </div>
+                    </div>
+                    <div style="margin-top:20px;padding:14px;background:var(--c-surface2);border-radius:var(--r-md);
+                        display:flex;align-items:center;gap:12px;cursor:pointer;border:2px dashed var(--c-border)" id="noDoctorPref" onclick="selectNoDoctor()">
+                        <div style="width:44px;height:44px;border-radius:50%;background:var(--c-border);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🎲</div>
+                        <div>
+                            <div style="font-weight:600;font-size:.88rem">Any Available Doctor</div>
+                            <div style="font-size:.78rem;color:var(--c-ink-4)">System will assign automatically</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 3: Confirm -->
+            <div id="step3" style="display:none">
+                <div class="card card-xl slide-up" style="max-width:600px;margin:0 auto">
+                    <h3 style="margin-bottom:20px">📋 Confirm Appointment</h3>
+                    <div style="display:flex;flex-direction:column;gap:12px" id="confirmDetails"></div>
+                    <div style="margin-top:20px">
+                        <div class="form-group">
+                            <label class="form-label">Notes (optional)</label>
+                            <textarea class="form-control" id="apptNotes" placeholder="Any specific concerns or symptoms…" rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:10px;margin-top:20px">
+                        <button class="btn btn-ghost" onclick="goStep2()">← Back</button>
+                        <button class="btn btn-primary btn-lg" style="flex:1" onclick="confirmAppointment()" id="confirmBtn">
+                            ✅ Confirm &amp; Book
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+    <script src="script.js"></script>
+    <script>
+        if (!requireAuth(['patient'])) throw '';
+        const user = getUser();
+        document.getElementById('sidebar').innerHTML = buildSidebar('appointment');
+        document.getElementById('navbar').innerHTML = buildNavbar('Book Appointment', 'Select department, date & doctor');
+
+        let selDept = null,
+            selDoctorId = null,
+            selDoctorName = null,
+            selDate = null;
+
+        // ── Booking window rules ──────────────────────────────────────────────
+        // • Min bookable date  : tomorrow (aaj ki raat 12 ke baad se)
+        //   → but if current time < 12:00 PM today, allow today also
+        //   Actually per requirement: tokens open at 12:00 AM for the NEXT day.
+        //   So earliest bookable = tomorrow's date always.
+        //   EXCEPT: if patient wants today's token and it is before 12:00 PM today,
+        //   today is also valid. The requirement says booking CLOSES at 12 PM of that date.
+        //   So: minDate = today (if before noon) else tomorrow.
+        // • Max bookable date  : 1 month from today
+        // • Booking for a date closes at 12:00 PM (noon) of that date.
+
+        function getBookingWindow() {
+            const now = new Date();
+            const noon = new Date(now);
+            noon.setHours(12, 0, 0, 0);
+
+            // Min: today if before noon, else tomorrow
+            const minDate = new Date(now);
+            if (now >= noon) {
+                minDate.setDate(minDate.getDate() + 1);
+            }
+            minDate.setHours(0, 0, 0, 0);
+
+            // Max: 1 month from today
+            const maxDate = new Date(now);
+            maxDate.setMonth(maxDate.getMonth() + 1);
+            maxDate.setHours(0, 0, 0, 0);
+
+            return {
+                minDate,
+                maxDate,
+                minStr: minDate.toISOString().split('T')[0],
+                maxStr: maxDate.toISOString().split('T')[0],
+            };
+        }
+
+        // Validate a chosen date against the booking window
+        function validateDate(dateStr) {
+            if (!dateStr) return {
+                ok: false,
+                msg: 'Please select a date.'
+            };
+            const {
+                minDate,
+                maxDate
+            } = getBookingWindow();
+            const chosen = new Date(dateStr + 'T00:00:00');
+
+            if (chosen < minDate) {
+                const now = new Date();
+                const noon = new Date(now);
+                noon.setHours(12, 0, 0, 0);
+                if (now >= noon) {
+                    return {
+                        ok: false,
+                        msg: '⚠️ Booking for today has closed (past 12:00 PM). Please select tomorrow or a later date.'
+                    };
+                }
+                return {
+                    ok: false,
+                    msg: '⚠️ Selected date is in the past.'
+                };
+            }
+            if (chosen > maxDate) {
+                return {
+                    ok: false,
+                    msg: `⚠️ You can only book up to 1 month in advance (latest: ${maxDate.toLocaleDateString('en-IN')}).`
+                };
+            }
+            return {
+                ok: true,
+                msg: ''
+            };
+        }
+
+        // ── Init date input ───────────────────────────────────────────────────
+        (function initDate() {
+            const {
+                minStr,
+                maxStr
+            } = getBookingWindow();
+            const input = document.getElementById('apptDate');
+            input.min = minStr;
+            input.max = maxStr;
+            input.value = minStr; // default = earliest available
+        })();
+
+        // ── Dept cards ────────────────────────────────────────────────────────
+        document.getElementById('deptGrid').innerHTML = DEPARTMENTS.map(d => `
+            <div class="doctor-card" data-dept="${d.id}" onclick="selectDept('${d.id}')" style="padding:16px">
+                <div style="font-size:24px;margin-bottom:6px">${d.icon}</div>
+                <div style="font-weight:600;font-size:.82rem">${d.id}</div>
+                <div style="font-size:.72rem;color:var(--c-ink-4)">${d.room}</div>
+            </div>`).join('');
+
+        function selectDept(id) {
+            selDept = id;
+            document.querySelectorAll('.doctor-card[data-dept]').forEach(c =>
+                c.classList.toggle('selected', c.dataset.dept === id)
+            );
+            checkSlotAvailability();
+            checkStep1();
+        }
+
+        // ── Date change ───────────────────────────────────────────────────────
+        function onDateChange() {
+            selDate = document.getElementById('apptDate').value;
+            const validation = validateDate(selDate);
+            const infoEl = document.getElementById('dateInfo');
+            const infoText = document.getElementById('dateInfoText');
+
+            if (!validation.ok) {
+                infoEl.style.display = 'block';
+                infoEl.style.background = 'var(--red-100,#fee2e2)';
+                infoText.style.color = '#b91c1c';
+                infoText.textContent = validation.msg;
+                document.getElementById('toStep2Btn').disabled = true;
+                return;
+            }
+
+            if (selDate) {
+                const d = new Date(selDate + 'T00:00:00');
+                infoEl.style.display = 'block';
+                infoEl.style.background = 'var(--c-primary-lt)';
+                infoText.style.color = 'var(--c-primary-dk)';
+                infoText.textContent = `📅 ${d.toLocaleDateString('en-IN',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})}`;
+            }
+
+            checkSlotAvailability();
+            checkStep1();
+        }
+
+        // ── Check slots remaining for dept + date ─────────────────────────────
+        // Calls /departments/slots?dept=X&date=Y which should return
+        // { max_tokens, booked_count, available }
+        // If API not available yet, we skip silently.
+        async function checkSlotAvailability() {
+            if (!selDept || !selDate) return;
+            const slotEl = document.getElementById('slotInfo');
+            try {
+                const data = await apiCall(`/departments/slots?dept=${encodeURIComponent(selDept)}&date=${selDate}`);
+                const available = data.available !== undefined ? data.available : null;
+                const max = data.max_tokens || null;
+                const booked = data.booked_count || 0;
+
+                if (available !== null) {
+                    slotEl.style.display = 'block';
+                    if (available <= 0) {
+                        slotEl.style.background = 'var(--red-100,#fee2e2)';
+                        slotEl.style.color = '#b91c1c';
+                        slotEl.textContent = `❌ No slots available for ${selDept} on this date (${booked}/${max} booked). Please choose another date.`;
+                        document.getElementById('toStep2Btn').disabled = true;
+                        return;
+                    } else if (available <= 5) {
+                        slotEl.style.background = '#fef3c7';
+                        slotEl.style.color = '#92400e';
+                        slotEl.textContent = `⚠️ Only ${available} slot${available===1?'':'s'} left for ${selDept} on this date.`;
+                    } else {
+                        slotEl.style.background = 'var(--green-100,#dcfce7)';
+                        slotEl.style.color = '#15803d';
+                        slotEl.textContent = `✅ ${available} slot${available===1?'':'s'} available for ${selDept} on this date.`;
+                    }
+                } else {
+                    slotEl.style.display = 'none';
+                }
+            } catch (e) {
+                // API not yet implemented — hide slot info silently
+                slotEl.style.display = 'none';
+            }
+            checkStep1();
+        }
+
+        function checkStep1() {
+            const validation = validateDate(document.getElementById('apptDate').value);
+            document.getElementById('toStep2Btn').disabled = !(selDept && validation.ok);
+        }
+
+        onDateChange(); // run once on load
+
+        // ── Step navigation ───────────────────────────────────────────────────
+        function setStep(n) {
+            [1, 2, 3].forEach(i => {
+                document.getElementById(`step${i}`).style.display = i === n ? 'block' : 'none';
+                const b = document.getElementById(`step${i}bar`);
+                if (i === n) {
+                    b.style.background = 'linear-gradient(135deg,var(--c-primary),var(--c-primary-mid))';
+                    b.style.color = '#fff';
+                } else if (i < n) {
+                    b.style.background = 'var(--green-100)';
+                    b.style.color = '#15803d';
+                } else {
+                    b.style.background = 'var(--c-surface2)';
+                    b.style.color = 'var(--c-ink-3)';
+                }
+            });
+        }
+
+        function goStep1() {
+            setStep(1);
+        }
+
+        async function goStep2() {
+            selDate = document.getElementById('apptDate').value;
+            const validation = validateDate(selDate);
+            if (!selDept) {
+                showToast('Select a department', '', 'warning');
+                return;
+            }
+            if (!validation.ok) {
+                showToast(validation.msg, '', 'warning');
+                return;
+            }
+            setStep(2);
+            await loadDoctors();
+            await checkDeptSlotBanner();
+        }
+
+        // ── Show dept slot banner in step 2 ───────────────────────────────────
+        async function checkDeptSlotBanner() {
+            const banner = document.getElementById('deptSlotBanner');
+            try {
+                const data = await apiCall(`/departments/slots?dept=${encodeURIComponent(selDept)}&date=${selDate}`);
+                const available = data.available !== undefined ? data.available : null;
+                const max = data.max_tokens || null;
+                const booked = data.booked_count || 0;
+                if (available !== null) {
+                    banner.style.display = 'block';
+                    if (available <= 0) {
+                        banner.style.background = 'var(--red-100,#fee2e2)';
+                        banner.style.color = '#b91c1c';
+                        banner.textContent = `❌ This department is fully booked on this date (${booked}/${max}). Please go back and choose another date.`;
+                    } else if (available <= 5) {
+                        banner.style.background = '#fef3c7';
+                        banner.style.color = '#92400e';
+                        banner.textContent = `⚠️ Only ${available} token${available===1?'':'s'} left for ${selDept} on ${selDate}.`;
+                    } else {
+                        banner.style.display = 'none';
+                    }
+                } else {
+                    banner.style.display = 'none';
+                }
+            } catch (e) {
+                banner.style.display = 'none';
+            }
+        }
+
+        // ── Load doctors ──────────────────────────────────────────────────────
+        async function loadDoctors() {
+            const grid = document.getElementById('doctorGrid');
+            grid.innerHTML = `<div class="empty-state" style="padding:30px;grid-column:1/-1"><div class="spinner spinner-blue"></div><p>Loading...</p></div>`;
+            try {
+                const data = await apiCall(`/doctors?department=${selDept}`);
+                const docs = data.doctors || [];
+                if (!docs.length) {
+                    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--c-ink-4);padding:20px">No doctors listed for ${selDept}</div>`;
+                    return;
+                }
+                grid.innerHTML = docs.map(d => `
+                    <div class="doctor-card" data-docid="${d.id}"
+                        onclick="selectDoctor(${d.id},'${d.name.replace(/'/g,"\\'")}','${d.room_number||""}')"
+                        style="text-align:left">
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+                            <div style="width:40px;height:40px;border-radius:50%;background:var(--c-primary-lt);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">👨‍⚕️</div>
+                            <div>
+                                <div style="font-weight:700;font-size:.88rem">${d.name}</div>
+                                <div style="font-size:.74rem;color:var(--c-ink-4)">${d.specialization || d.department}</div>
+                            </div>
+                        </div>
+                        <div style="font-size:.76rem;color:var(--c-ink-3)">🚪 Room: ${d.room_number || 'OPD'}</div>
+                    </div>`).join('');
+            } catch (e) {
+                showToast('Error loading doctors', e.message, 'error');
+            }
+        }
+
+        function selectDoctor(id, name, room) {
+            selDoctorId = id;
+            selDoctorName = name;
+            document.querySelectorAll('.doctor-card[data-docid]').forEach(c =>
+                c.classList.toggle('selected', c.dataset.docid == id)
+            );
+            document.getElementById('noDoctorPref').style.border = '2px dashed var(--c-border)';
+            setTimeout(() => goStep3(), 300);
+        }
+
+        function selectNoDoctor() {
+            selDoctorId = null;
+            selDoctorName = 'Any Available Doctor';
+            document.querySelectorAll('.doctor-card[data-docid]').forEach(c => c.classList.remove('selected'));
+            document.getElementById('noDoctorPref').style.border = '2px solid var(--c-primary-mid)';
+            setTimeout(() => goStep3(), 300);
+        }
+
+        // ── Step 3 confirm ────────────────────────────────────────────────────
+        function goStep3() {
+            setStep(3);
+            const dept = DEPARTMENTS.find(d => d.id === selDept);
+            document.getElementById('confirmDetails').innerHTML = `
+                <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--c-surface2)">
+                    <span style="color:var(--c-ink-3);font-size:.85rem">Department</span>
+                    <span style="font-weight:600;font-size:.85rem">${dept?.icon} ${selDept}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--c-surface2)">
+                    <span style="color:var(--c-ink-3);font-size:.85rem">Date</span>
+                    <span style="font-weight:600;font-size:.85rem">${fmtDate(selDate)}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--c-surface2)">
+                    <span style="color:var(--c-ink-3);font-size:.85rem">Doctor</span>
+                    <span style="font-weight:600;font-size:.85rem">${selDoctorName || 'Any Available'}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:10px 0">
+                    <span style="color:var(--c-ink-3);font-size:.85rem">Room</span>
+                    <span style="font-weight:600;font-size:.85rem">${dept?.room || 'TBD'}</span>
+                </div>`;
+        }
+
+        // ── Confirm & book ────────────────────────────────────────────────────
+        async function confirmAppointment() {
+            // Final validation before booking
+            const validation = validateDate(selDate);
+            if (!validation.ok) {
+                showToast('Cannot book', validation.msg, 'error');
+                return;
+            }
+
+            const btn = document.getElementById('confirmBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Booking…';
+            try {
+                const apptData = await apiCall('/appointments', 'POST', {
+                    user_id: user.id,
+                    doctor_id: selDoctorId || null,
+                    department: selDept,
+                    appt_date: selDate,
+                    notes: document.getElementById('apptNotes').value || null,
+                });
+                localStorage.setItem('hq_lastApptId', apptData.appointment.id);
+                localStorage.setItem('hq_lastApptDept', selDept);
+
+                showLoading('Generating your token…');
+                const tokenData = await apiCall('/generate-token', 'POST', {
+                    user_id: user.id,
+                    department: selDept,
+                    appointment_id: apptData.appointment.id,
+                });
+                hideLoading();
+                localStorage.setItem('hq_lastTokenId', tokenData.token.id);
+                showToast('Appointment booked!', `Token #${tokenData.token.token_number} generated`, 'success');
+                setTimeout(() => window.location.href = `token.html?id=${tokenData.token.id}`, 900);
+            } catch (e) {
+                hideLoading();
+                btn.disabled = false;
+                btn.innerHTML = '✅ Confirm & Book';
+                // If backend returns slot-full error, show clearly
+                if (e.message && e.message.toLowerCase().includes('full')) {
+                    showToast('Department Full', `No more tokens available for ${selDept} on ${selDate}. Please choose another date.`, 'error');
+                } else {
+                    showToast('Error', e.message, 'error');
+                }
+            }
+        }
+
+        if (window.innerWidth < 768) {
+            const g = document.querySelector('.appt-grid');
+            if (g) g.style.setProperty('grid-template-columns', '1fr');
+        }
+    </script>
+</body>
+
+</html>

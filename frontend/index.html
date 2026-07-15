@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>MediQueue — Hospital Queue System</title>
+<link rel="stylesheet" href="style.css"/>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+</head>
+<body>
+<div class="login-page">
+  <!-- Left panel - branding -->
+  <div class="login-left">
+    <div style="margin-bottom:auto;padding-bottom:32px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:48px">
+        <div style="width:34px;height:34px;background:var(--c-primary);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </div>
+        <span style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;color:#fff;letter-spacing:-.01em">MediQueue</span>
+      </div>
+      <h2 style="color:#fff;font-size:1.5rem;font-weight:700;line-height:1.3;margin-bottom:12px;font-family:var(--font-display)">Skip the queue.<br/>Not the care.</h2>
+      <p style="color:rgba(255,255,255,.45);font-size:.88rem;line-height:1.7;margin-bottom:32px">Book your OPD slot online, get a numbered token, and arrive exactly when it's your turn.</p>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <span style="color:rgba(255,255,255,.55);font-size:.83rem">Book by date &amp; department — no fixed time</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <span style="color:rgba(255,255,255,.55);font-size:.83rem">QR code token scanned at entry and counter</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <span style="color:rgba(255,255,255,.55);font-size:.83rem">Digital OPD record &amp; prescription history</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <span style="color:rgba(255,255,255,.55);font-size:.83rem">Medicine pickup notification when ready</span>
+        </div>
+      </div>
+    </div>
+    <p style="color:rgba(255,255,255,.2);font-size:.72rem;margin-top:auto">&#169; 2025 MediQueue. Built for public hospitals.</p>
+  </div>
+
+  <!-- Right panel - form -->
+  <div class="login-right">
+  <div class="login-card" id="mainCard">
+
+    <!-- Logo -->
+    <h1 style="margin-bottom:4px">MediQueue</h1>
+    <p style="margin-bottom:0;font-size:.85rem;color:var(--c-ink-4)">Smart Hospital Queue Management System</p>
+
+    <!-- Tab switcher -->
+    <div style="display:flex;background:var(--c-surface2);border-radius:var(--r-md);padding:4px;margin:20px 0 24px;gap:4px" id="tabBar">
+      <button id="tabLogin" onclick="switchTab('login')"
+        style="flex:1;padding:8px;border:none;border-radius:8px;font-size:.88rem;font-weight:600;cursor:pointer;transition:all .2s;background:var(--c-primary);color:#fff">
+        Sign In
+      </button>
+      <button id="tabRegister" onclick="switchTab('register')"
+        style="flex:1;padding:8px;border:none;border-radius:8px;font-size:.88rem;font-weight:600;cursor:pointer;transition:all .2s;background:transparent;color:var(--c-ink-3)">
+        Create Account
+      </button>
+    </div>
+
+    <!-- ── LOGIN FORM ── -->
+    <div id="loginForm">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input class="form-control" id="lEmail" type="email" placeholder="you@example.com"
+            onkeypress="if(event.key==='Enter')doLogin()"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <div style="position:relative">
+            <input class="form-control" id="lPassword" type="password" placeholder="Enter your password"
+              onkeypress="if(event.key==='Enter')doLogin()" style="padding-right:44px"/>
+            <button onclick="togglePwd('lPassword')" type="button"
+              style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--c-ink-4);font-size:15px;line-height:1">👁</button>
+          </div>
+          <div style="text-align:right;margin-top:4px">
+            <button onclick="switchTab('forgot')"
+              style="background:none;border:none;cursor:pointer;font-size:.8rem;color:var(--c-primary);font-weight:500">
+              Forgot password?
+            </button>
+          </div>
+        </div>
+        <div id="loginError" class="form-error" style="display:none"></div>
+        <button class="btn btn-primary btn-lg btn-full" onclick="doLogin()" id="loginBtn">Sign In</button>
+      </div>
+      <div class="divider">or continue with</div>
+      <button class="btn-google" onclick="signInWithGoogle()">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google"/>
+        Continue with Google
+      </button>
+    </div>
+
+    <!-- ── REGISTER FORM ── -->
+    <div id="registerForm" style="display:none">
+      <div style="background:var(--c-primary-lt);border:1px solid var(--c-primary-lt);border-radius:var(--r-md);
+        padding:10px 14px;margin-bottom:16px;font-size:.82rem;color:var(--c-primary-dk)">
+        ℹ️ Registration is for <strong>patients only</strong>. Staff accounts are created by the hospital administrator.
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input class="form-control" id="rName" type="text" placeholder="Enter your full name"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input class="form-control" id="rEmail" type="email" placeholder="you@example.com"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone Number <span style="color:var(--c-ink-4);font-weight:400">(optional)</span></label>
+          <input class="form-control" id="rPhone" type="tel" placeholder="+91 98765 43210"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <div style="position:relative">
+            <input class="form-control" id="rPassword" type="password" placeholder="Minimum 6 characters" style="padding-right:44px"/>
+            <button onclick="togglePwd('rPassword')" type="button"
+              style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--c-ink-4);font-size:15px;line-height:1">👁</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm Password</label>
+          <input class="form-control" id="rConfirm" type="password" placeholder="Re-enter your password"
+            onkeypress="if(event.key==='Enter')doRegister()"/>
+        </div>
+        <div id="registerError" class="form-error" style="display:none"></div>
+        <button class="btn btn-primary btn-lg btn-full" onclick="doRegister()" id="registerBtn">Create Account</button>
+      </div>
+      <div class="divider">or sign up with</div>
+      <button class="btn-google" onclick="signInWithGoogle()">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google"/>
+        Continue with Google
+      </button>
+    </div>
+
+    <!-- ── FORGOT PASSWORD FORM ── -->
+    <div id="forgotForm" style="display:none">
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:40px;margin-bottom:8px">🔐</div>
+        <h3 style="margin-bottom:4px">Reset Your Password</h3>
+        <p style="font-size:.85rem;color:var(--c-ink-4)">Enter your email address and we'll send you a password reset link.</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input class="form-control" id="fEmail" type="email" placeholder="you@example.com"
+            onkeypress="if(event.key==='Enter')doForgotPassword()"/>
+        </div>
+        <div id="forgotError"   class="form-error"   style="display:none"></div>
+        <div id="forgotSuccess" class="form-success" style="display:none"></div>
+        <button class="btn btn-primary btn-lg btn-full" onclick="doForgotPassword()" id="forgotBtn">
+          Send Reset Link
+        </button>
+        <button onclick="switchTab('login')" type="button"
+          style="background:none;border:none;cursor:pointer;color:var(--c-primary);font-size:.88rem;font-weight:600;padding:4px">
+          ← Back to Sign In
+        </button>
+      </div>
+    </div>
+
+    <p style="margin-top:20px;font-size:.73rem;color:var(--c-ink-4);text-align:center">
+      By continuing you agree to our Terms of Service and Privacy Policy
+    </p>
+  </div>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay" style="display:none">
+  <div class="spinner spinner-blue" style="width:40px;height:40px;border-width:4px"></div>
+  <p>Please wait…</p>
+</div>
+<div id="toast-container"></div>
+
+<style>
+.form-error   { padding:10px 12px; background:var(--red-100);   border-radius:var(--r-md); font-size:.82rem; color:#b91c1c; font-weight:500; border-left:3px solid var(--red-500); }
+.form-success { padding:10px 12px; background:var(--green-100); border-radius:var(--r-md); font-size:.82rem; color:#15803d; font-weight:500; border-left:3px solid var(--green-500); }
+</style>
+
+<script src="script.js"></script>
+<script>
+// ── Firebase Config ──────────────────────────────────────────
+const firebaseConfig = {
+  apiKey:            "AIzaSyDpZcfU7Ikfki_zZ62yxJ3KwucvJREHf00",
+  authDomain:        "mediqueue-5a6be.firebaseapp.com",
+  projectId:         "mediqueue-5a6be",
+  storageBucket:     "mediqueue-5a6be.firebasestorage.app",
+  messagingSenderId: "982618097580",
+  appId:             "1:982618097580:web:b85d37d7e1859ca7fa1c09"
+};
+try { firebase.initializeApp(firebaseConfig); } catch(e) { console.warn('Firebase already initialized or error:', e.message); }
+
+// ── Redirect if already logged in ──────────────────────────
+(function(){
+  const u = getUser();
+  if (u) redirectByRole(u.role);
+})();
+
+// ── Tab switching ───────────────────────────────────────────
+function switchTab(tab) {
+  ['loginForm','registerForm','forgotForm'].forEach(id => document.getElementById(id).style.display = 'none');
+  document.getElementById('tabBar').style.display = tab === 'forgot' ? 'none' : 'flex';
+  clearErrors();
+
+  if (tab === 'login') {
+    document.getElementById('loginForm').style.display = 'block';
+    setTabActive('tabLogin');
+  } else if (tab === 'register') {
+    document.getElementById('registerForm').style.display = 'block';
+    setTabActive('tabRegister');
+  } else if (tab === 'forgot') {
+    document.getElementById('forgotForm').style.display = 'block';
+    document.getElementById('tabBar').style.display = 'none';
+  }
+}
+
+function setTabActive(activeId) {
+  ['tabLogin','tabRegister'].forEach(id => {
+    const btn = document.getElementById(id);
+    const isActive = id === activeId;
+    btn.style.background = isActive ? 'var(--c-primary)' : 'transparent';
+    btn.style.color      = isActive ? '#fff' : 'var(--c-ink-3)';
+  });
+}
+
+function clearErrors() {
+  ['loginError','registerError','forgotError','forgotSuccess'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.style.display = 'none'; el.textContent = ''; }
+  });
+}
+function showError(id, msg)   { const el = document.getElementById(id); if (el) { el.textContent = msg; el.style.display = 'block'; } }
+function showSuccess(id, msg) { const el = document.getElementById(id); if (el) { el.textContent = msg; el.style.display = 'block'; } }
+function togglePwd(id)        { const inp = document.getElementById(id); inp.type = inp.type === 'password' ? 'text' : 'password'; }
+
+// ── Email/Password Login ────────────────────────────────────
+async function doLogin() {
+  clearErrors();
+  const email    = document.getElementById('lEmail').value.trim();
+  const password = document.getElementById('lPassword').value;
+  if (!email || !password) return showError('loginError', 'Please enter your email and password.');
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Signing in…';
+  try {
+    const data = await apiCall('/login', 'POST', { email, password });
+    saveSession(data);
+    showToast('Welcome back!', `Hello, ${data.user.name}`, 'success');
+    setTimeout(() => redirectByRole(data.user.role), 700);
+  } catch(e) {
+    showError('loginError', e.message);
+    btn.disabled = false; btn.innerHTML = 'Sign In';
+  }
+}
+
+// ── Register ────────────────────────────────────────────────
+async function doRegister() {
+  clearErrors();
+  const name     = document.getElementById('rName').value.trim();
+  const email    = document.getElementById('rEmail').value.trim();
+  const phone    = document.getElementById('rPhone').value.trim();
+  const password = document.getElementById('rPassword').value;
+  const confirm  = document.getElementById('rConfirm').value;
+
+  if (!name)                return showError('registerError', 'Please enter your full name.');
+  if (!email)               return showError('registerError', 'Please enter your email address.');
+  if (!password)            return showError('registerError', 'Please choose a password.');
+  if (password.length < 6)  return showError('registerError', 'Password must be at least 6 characters long.');
+  if (password !== confirm)  return showError('registerError', 'Passwords do not match. Please try again.');
+
+  const btn = document.getElementById('registerBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Creating account…';
+  try {
+    const data = await apiCall('/register', 'POST', { name, email, password, phone });
+    saveSession(data);
+    showToast('Account created!', `Welcome to MediQueue, ${data.user.name}`, 'success');
+    setTimeout(() => window.location.href = 'dashboard.html', 700);
+  } catch(e) {
+    showError('registerError', e.message);
+    btn.disabled = false; btn.innerHTML = 'Create Account';
+  }
+}
+
+// ── Forgot Password ─────────────────────────────────────────
+async function doForgotPassword() {
+  clearErrors();
+  const email = document.getElementById('fEmail').value.trim();
+  if (!email) return showError('forgotError', 'Please enter your email address.');
+
+  const btn = document.getElementById('forgotBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Sending…';
+
+  try {
+    // First verify email exists in our system
+    await apiCall('/forgot-password', 'POST', { email });
+
+    // Send Firebase password reset email
+    await firebase.auth().sendPasswordResetEmail(email);
+    showSuccess('forgotSuccess', '✅ Password reset link sent! Please check your email inbox (and spam folder).');
+    showError('forgotError', '');
+    btn.innerHTML = 'Reset Link Sent';
+  } catch(e) {
+    let msg = e.message;
+    // Friendly Firebase error messages
+    if (msg.includes('auth/invalid-email'))       msg = 'Please enter a valid email address.';
+    if (msg.includes('auth/too-many-requests'))   msg = 'Too many attempts. Please wait a few minutes and try again.';
+    if (msg.includes('auth/network-request-failed')) msg = 'Network error. Please check your connection.';
+    if (msg.includes('No account found'))         msg = 'No account found with this email address.';
+    showError('forgotError', msg);
+    btn.disabled = false; btn.innerHTML = 'Send Reset Link';
+  }
+}
+
+// ── Google Sign-In ──────────────────────────────────────────
+async function signInWithGoogle() {
+  document.getElementById('loadingOverlay').style.display = 'flex';
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    const result   = await firebase.auth().signInWithPopup(provider);
+    const u        = result.user;
+    const data     = await apiCall('/google-auth', 'POST', { name: u.displayName, email: u.email, photo_url: u.photoURL });
+    saveSession(data);
+    showToast('Welcome!', `Hello, ${data.user.name}`, 'success');
+    setTimeout(() => redirectByRole(data.user.role), 700);
+  } catch(e) {
+    document.getElementById('loadingOverlay').style.display = 'none';
+    let msg = e.message || 'Google sign-in failed.';
+    if (e.code === 'auth/popup-closed-by-user') msg = 'Sign-in window was closed. Please try again.';
+    if (e.code === 'auth/popup-blocked')        msg = 'Pop-up blocked by browser. Please allow pop-ups for this site.';
+    showToast('Sign-in failed', msg, 'error');
+  }
+}
+
+// ── Session save ────────────────────────────────────────────
+function saveSession(data) {
+  localStorage.setItem('hq_user',       JSON.stringify(data.user));
+  localStorage.setItem('hq_token',      data.token);
+  localStorage.setItem('hq_hasOpdCard', data.hasOpdCard || false);
+  localStorage.setItem('hq_opdCardId',  data.opdCardId  || '');
+}
+</script>
+</body>
+</html>

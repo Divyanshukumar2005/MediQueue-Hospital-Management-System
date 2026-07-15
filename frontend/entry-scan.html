@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Entry Gate — MediQueue</title>
+    <link rel="stylesheet" href="style.css" />
+    <!-- jsQR — loaded dynamically with multiple CDN fallbacks -->
+    <script>
+    (function() {
+        var CDNS = [
+            'https://unpkg.com/jsqr@1.4.0/dist/jsQR.js',
+            'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js'
+        ];
+        function tryLoad(i) {
+            if (i >= CDNS.length) return;
+            var s = document.createElement('script');
+            s.src = CDNS[i];
+            s.onerror = function() { tryLoad(i + 1); };
+            document.head.appendChild(s);
+        }
+        tryLoad(0);
+    })();
+    </script>
+    <style>
+        body {
+            background: #F5F4F0 !important;
+        }
+        
+        .scanner-box {
+            width: 260px;
+            height: 260px;
+            border-radius: 16px;
+            overflow: hidden;
+            position: relative;
+            background: #1a1a1a;
+            border: 2px solid #D3D1C7;
+            margin: 0 auto 16px;
+        }
+        
+        .scanner-box video,
+        .scanner-box canvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .scanner-box canvas {
+            display: none;
+        }
+        /* Corner brackets */
+        
+        .scan-corner {
+            position: absolute;
+            width: 36px;
+            height: 36px;
+            border-color: #185FA5;
+            border-style: solid;
+            border-width: 0;
+            z-index: 10;
+        }
+        
+        .scan-corner.tl {
+            top: 18px;
+            left: 18px;
+            border-top-width: 3px;
+            border-left-width: 3px;
+            border-radius: 4px 0 0 0;
+        }
+        
+        .scan-corner.tr {
+            top: 18px;
+            right: 18px;
+            border-top-width: 3px;
+            border-right-width: 3px;
+            border-radius: 0 4px 0 0;
+        }
+        
+        .scan-corner.bl {
+            bottom: 18px;
+            left: 18px;
+            border-bottom-width: 3px;
+            border-left-width: 3px;
+            border-radius: 0 0 0 4px;
+        }
+        
+        .scan-corner.br {
+            bottom: 18px;
+            right: 18px;
+            border-bottom-width: 3px;
+            border-right-width: 3px;
+            border-radius: 0 0 4px 0;
+        }
+        
+        .scan-line {
+            position: absolute;
+            left: 18px;
+            right: 18px;
+            height: 2px;
+            z-index: 10;
+            background: linear-gradient(90deg, transparent, #185FA5, transparent);
+            animation: scanMove 2s ease-in-out infinite;
+        }
+        
+        @keyframes scanMove {
+            0% {
+                top: 18px;
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                top: calc(100% - 20px);
+                opacity: 0;
+            }
+        }
+        
+        .scan-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 10px;
+            color: #888;
+            font-size: .82rem;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .scan-placeholder .icon {
+            font-size: 36px;
+        }
+        
+        .scan-status {
+            font-size: .78rem;
+            text-align: center;
+            margin-bottom: 12px;
+            min-height: 20px;
+            font-weight: 600;
+        }
+        
+        .scan-status.active {
+            color: #185FA5;
+        }
+        
+        .scan-status.success {
+            color: #2d7a0f;
+        }
+        
+        .scan-status.error {
+            color: #b91c1c;
+        }
+        
+        .cam-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 18px;
+            border-radius: 10px;
+            font-size: .84rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1.5px solid;
+            transition: all .2s;
+        }
+        
+        .cam-btn.start {
+            background: #185FA5;
+            color: #fff;
+            border-color: #185FA5;
+        }
+        
+        .cam-btn.start:hover {
+            background: #135089;
+        }
+        
+        .cam-btn.stop {
+            background: #fff;
+            color: #b91c1c;
+            border-color: #fca5a5;
+        }
+        
+        .cam-btn.stop:hover {
+            background: #fef2f2;
+        }
+        
+        .gate-card {
+            background: #fff;
+            border: 0.5px solid #D3D1C7;
+            border-radius: 20px;
+            padding: 28px;
+            width: 100%;
+            max-width: 440px;
+            text-align: center;
+            box-shadow: 0 1px 8px rgba(0, 0, 0, .06);
+        }
+        
+        .result-card {
+            width: 100%;
+            max-width: 440px;
+            border-radius: 20px;
+            padding: 28px;
+            text-align: center;
+            animation: fadeUp .35s ease both;
+            border: 0.5px solid #D3D1C7;
+        }
+        
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(14px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .manual-input {
+            background: #F5F4F0 !important;
+            border: 0.5px solid #C8C6BE !important;
+            color: #2C2C2A !important;
+        }
+        
+        .manual-input::placeholder {
+            color: #B4B2A9 !important;
+        }
+        
+        .manual-input:focus {
+            border-color: #185FA5 !important;
+            background: #fff !important;
+        }
+        
+        .recent-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: #fff;
+            border-radius: 10px;
+            border: 0.5px solid #D3D1C7;
+        }
+        
+        .back-link {
+            color: #888780;
+            font-size: .8rem;
+            margin-top: 28px;
+            text-decoration: underline;
+        }
+        
+        .back-link:hover {
+            color: #185FA5;
+        }
+        /* Divider */
+        
+        .or-divider {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 16px 0;
+            color: #B4B2A9;
+            font-size: .78rem;
+        }
+        
+        .or-divider::before,
+        .or-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #E8E6DF;
+        }
+    </style>
+</head>
+
+<body>
+    <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:#F5F4F0">
+
+        <!-- Header -->
+        <div style="text-align:center;margin-bottom:28px">
+            <div style="width:56px;height:56px;background:#E6F1FB;border-radius:16px;display:flex;align-items:center;
+                justify-content:center;font-size:26px;margin:0 auto 12px;border:0.5px solid #B5D4F4">🏥</div>
+            <h1 style="color:#2C2C2A;font-size:1.5rem;font-weight:700">MediQueue — Entry Gate</h1>
+            <p style="color:#888780;font-size:.85rem;margin-top:4px">Scan patient QR code to verify entry</p>
+        </div>
+
+        <!-- Scanner card -->
+        <div class="gate-card">
+
+            <!-- Camera scanner box -->
+            <div class="scanner-box" id="scannerBox">
+                <video id="scanVideo" autoplay playsinline muted></video>
+                <canvas id="scanCanvas"></canvas>
+
+                <!-- Corner brackets (visible over video) -->
+                <div class="scan-corner tl"></div>
+                <div class="scan-corner tr"></div>
+                <div class="scan-corner bl"></div>
+                <div class="scan-corner br"></div>
+                <div class="scan-line" id="scanLine" style="display:none"></div>
+
+                <!-- Placeholder when camera off -->
+                <div class="scan-placeholder" id="scanPlaceholder">
+                    <div class="icon">📷</div>
+                    <div>Tap <b>Start Camera</b> to scan QR code</div>
+                    <div style="font-size:.72rem;color:#B4B2A9">Works on mobile & desktop</div>
+                </div>
+            </div>
+
+            <!-- Camera status -->
+            <div class="scan-status" id="scanStatus"></div>
+
+            <!-- Camera controls -->
+            <div style="display:flex;gap:10px;justify-content:center;margin-bottom:16px">
+                <button class="cam-btn start" id="startBtn" onclick="startCamera()">📷 Start Camera</button>
+                <button class="cam-btn stop" id="stopBtn" onclick="stopCamera()" style="display:none">⏹ Stop</button>
+            </div>
+
+            <!-- Divider -->
+            <div class="or-divider">or enter manually</div>
+
+            <!-- Manual input -->
+            <div style="display:flex;gap:10px;margin-bottom:14px">
+                <input class="form-control manual-input" id="manualToken" placeholder="Token number…" type="number" onkeypress="if(event.key==='Enter')verifyManual()" />
+                <button class="btn btn-primary" onclick="verifyManual()">Verify</button>
+            </div>
+        </div>
+
+        <!-- Result card -->
+        <div id="resultCard" style="display:none;margin-top:16px"></div>
+
+        <!-- Recent verifications -->
+        <div style="margin-top:24px;width:100%;max-width:440px">
+            <div style="color:#B4B2A9;font-size:.74rem;font-weight:600;letter-spacing:.08em;
+                text-transform:uppercase;margin-bottom:10px">Recent Verifications</div>
+            <div id="recentVerifs" style="display:flex;flex-direction:column;gap:8px"></div>
+        </div>
+
+        <a href="dashboard.html" class="back-link">← Back to Dashboard</a>
+    </div>
+
+    <div id="toast-container"></div>
+    <script src="script.js"></script>
+    <script>
+        // ── State ─────────────────────────────────────────────────────────────
+        const recentList = [];
+        let videoStream = null;
+        let scanInterval = null;
+        let lastScanned = ''; // debounce — same QR ko baar baar scan hone se rokta hai
+        let scanCooldown = false;
+
+        const video = document.getElementById('scanVideo');
+        const canvas = document.getElementById('scanCanvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+        // ── Wait for jsQR to load (max 8s, tries every 200ms) ────────────────
+        function waitForJsQR() {
+            return new Promise((resolve, reject) => {
+                if (typeof jsQR !== 'undefined') return resolve();
+                let tries = 0;
+                const t = setInterval(() => {
+                    if (typeof jsQR !== 'undefined') { clearInterval(t); resolve(); }
+                    else if (++tries > 40) { clearInterval(t); reject(new Error('jsQR failed to load')); }
+                }, 200);
+            });
+        }
+
+        // ── Camera start ──────────────────────────────────────────────────────
+        async function startCamera() {
+            setStatus('Loading QR scanner library…', 'active');
+            try {
+                await waitForJsQR();
+            } catch(e) {
+                setStatus('❌ QR scanner library could not load. Check your internet connection and refresh.', 'error');
+                return;
+            }
+            setStatus('Requesting camera access…', 'active');
+            try {
+                // Prefer back camera (mobile ke liye)
+                const constraints = {
+                    video: {
+                        facingMode: {
+                            ideal: 'environment'
+                        },
+                        width: {
+                            ideal: 1280
+                        },
+                        height: {
+                            ideal: 720
+                        },
+                    }
+                };
+                videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = videoStream;
+
+                await video.play();
+
+                // UI update
+                document.getElementById('scanPlaceholder').style.display = 'none';
+                document.getElementById('scanLine').style.display = 'block';
+                document.getElementById('startBtn').style.display = 'none';
+                document.getElementById('stopBtn').style.display = 'inline-flex';
+                setStatus('📷 Camera active — point at QR code', 'active');
+
+                // Start scanning loop every 300ms
+                scanInterval = setInterval(scanFrame, 300);
+
+            } catch (err) {
+                if (err.name === 'NotAllowedError') {
+                    setStatus('❌ Camera permission denied. Please allow camera access.', 'error');
+                } else if (err.name === 'NotFoundError') {
+                    setStatus('❌ No camera found on this device.', 'error');
+                } else {
+                    setStatus('❌ Camera error: ' + err.message, 'error');
+                }
+            }
+        }
+
+        // ── Camera stop ───────────────────────────────────────────────────────
+        function stopCamera() {
+            if (scanInterval) {
+                clearInterval(scanInterval);
+                scanInterval = null;
+            }
+            if (videoStream) {
+                videoStream.getTracks().forEach(t => t.stop());
+                videoStream = null;
+            }
+
+            video.srcObject = null;
+            document.getElementById('scanPlaceholder').style.display = 'flex';
+            document.getElementById('scanLine').style.display = 'none';
+            document.getElementById('startBtn').style.display = 'inline-flex';
+            document.getElementById('stopBtn').style.display = 'none';
+            setStatus('', '');
+        }
+
+        // ── Scan one frame ────────────────────────────────────────────────────
+        function scanFrame() {
+            if (!video.videoWidth || scanCooldown) return;
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                inversionAttempts: 'dontInvert',
+            });
+
+            if (code && code.data && code.data !== lastScanned) {
+                lastScanned = code.data;
+                scanCooldown = true;
+                setTimeout(() => {
+                    scanCooldown = false;
+                    lastScanned = '';
+                }, 3000);
+
+                setStatus('✅ QR detected! Verifying…', 'success');
+                handleScannedData(code.data);
+            }
+        }
+
+        // ── Handle scanned QR data ────────────────────────────────────────────
+        // Priority order:
+        // 1. token_uid string — new: OPDGEN23042026DIVMOH003, old: OPD-20250423-GEN-0003
+        // 2. JSON with token_uid or tokenId (DB id)
+        // 3. Raw number (manual fallback)
+        async function handleScannedData(rawData) {
+            let identifier = null;
+
+            // Check: bare token_uid format (starts with OPD, any format)
+            const stripped = rawData.trim();
+            if (stripped.toUpperCase().startsWith('OPD')) {
+                identifier = stripped.toUpperCase();
+            } else {
+                // Try JSON parse (older MediQueue QR format)
+                try {
+                    const parsed = JSON.parse(stripped);
+                    // token_uid is best — use it if available
+                    if (parsed.token_uid) {
+                        identifier = parsed.token_uid.toUpperCase();
+                    } else if (parsed.tokenId) {
+                        // DB id fallback
+                        identifier = String(parsed.tokenId);
+                    }
+                } catch {
+                    // Raw number
+                    const n = parseInt(stripped);
+                    if (!isNaN(n)) identifier = String(n);
+                }
+            }
+
+            if (!identifier) {
+                setStatus('⚠️ Invalid QR code — not a MediQueue token', 'error');
+                return;
+            }
+
+            await doVerify(identifier);
+        }
+
+        // ── Manual verify ─────────────────────────────────────────────────────
+        async function verifyManual() {
+            const input = document.getElementById('manualToken').value.trim();
+            if (!input) {
+                showToast('Enter token number', '', 'warning');
+                return;
+            }
+            // Manual input: agar OPD- se shuru ho toh token_uid, warna number
+            await doVerify(input);
+        }
+
+        // ── Core verify function ──────────────────────────────────────────────
+        async function doVerify(identifier) {
+            const resultCard = document.getElementById('resultCard');
+            resultCard.style.display = 'block';
+            resultCard.className = 'result-card';
+            resultCard.style.background = '#fff';
+            resultCard.style.border = '0.5px solid #D3D1C7';
+            const displayId = identifier.toUpperCase().startsWith('OPD') ? identifier : `#${identifier}`;
+            resultCard.innerHTML = `
+                <div class="spinner spinner-blue" style="margin:0 auto;display:block;width:32px;height:32px;border-width:3px"></div>
+                <p style="color:#888780;margin-top:12px;font-size:.85rem">Verifying ${displayId}…</p>`;
+
+            // Scroll to result
+            resultCard.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest'
+            });
+
+            try {
+                const data = await apiCall(`/token-scan/${encodeURIComponent(identifier)}`);
+                const token = data.token;
+                const opdCard = data.opdCard || null;
+                const isValid = ['waiting', 'called'].includes(token.status);
+
+                if (isValid) {
+                    resultCard.style.background = '#EAF3DE';
+                    resultCard.style.border = '0.5px solid #97C459';
+                    resultCard.innerHTML = `
+                        <div style="width:56px;height:56px;background:#C0DD97;border-radius:50%;display:flex;align-items:center;
+                            justify-content:center;font-size:26px;margin:0 auto 12px">✅</div>
+                        <div style="font-size:1rem;font-weight:700;color:#27500A;letter-spacing:.04em">ENTRY ALLOWED</div>
+                        <div style="font-size:2.8rem;font-weight:800;color:#27500A;font-family:monospace;margin:10px 0">
+                            #${String(token.token_number).padStart(3,'0')}
+                        </div>
+                        ${_detailRows(token, opdCard, '#27500A', '#3B6D11', 'rgba(39,80,10,.12)')}
+                        ${data.isNewPatient ? `<div style="margin-top:12px;padding:8px 12px;background:#E6F1FB;
+                            border-radius:8px;font-size:.78rem;color:#185FA5;text-align:center;border:0.5px solid #B5D4F4">
+                            🆕 New patient — OPD card will be created</div>` : ''}
+                        <button onclick="closeResult()" style="margin-top:16px;width:100%;padding:8px;border-radius:8px;
+                            border:0.5px solid #C0DD97;background:transparent;color:#3B6D11;font-size:.8rem;cursor:pointer">
+                            ✕ Clear & Scan Next
+                        </button>`;
+                    setStatus('✅ Entry allowed — Token #' + token.token_number, 'success');
+                } else {
+                    resultCard.style.background = '#FAEEDA';
+                    resultCard.style.border     = '0.5px solid #FAC775';
+                    resultCard.innerHTML = `
+                        <div style="width:56px;height:56px;background:#FAC775;border-radius:50%;display:flex;align-items:center;
+                            justify-content:center;font-size:26px;margin:0 auto 12px">⚠️</div>
+                        <div style="font-size:1rem;font-weight:700;color:#633806;letter-spacing:.04em">
+                            TOKEN ${token.status.toUpperCase()}
+                        </div>
+                        <div style="font-size:2.8rem;font-weight:800;color:#633806;font-family:monospace;margin:10px 0">
+                            #${String(token.token_number).padStart(3,'0')}
+                        </div>
+                        ${_detailRows(token, opdCard, '#633806', '#854F0B', 'rgba(99,56,6,.1)')}
+                        <button onclick="closeResult()" style="margin-top:16px;width:100%;padding:8px;border-radius:8px;
+                            border:0.5px solid #FAC775;background:transparent;color:#854F0B;font-size:.8rem;cursor:pointer">
+                            ✕ Clear
+                        </button>`;
+                    setStatus('⚠️ Token ' + token.status, 'error');
+                }
+
+                recentList.unshift({
+                    num: token.token_number, name: token.user?.name || '—',
+                    dept: token.department, valid: isValid, time: new Date()
+                });
+                if (recentList.length > 5) recentList.pop();
+                renderRecent();
+                document.getElementById('manualToken').value = '';
+
+            } catch (e) {
+                // ── Date mismatch / expired / future token se alag UI ──
+                const msg = e.message || '';
+                const isExpired = msg.includes('expired') || msg.includes('ka hai');
+                const isFuture  = msg.includes('abhi valid nahi');
+                const icon  = isExpired ? '📅' : isFuture ? '🗓️' : '❌';
+                const title = isExpired ? 'TOKEN EXPIRED' : isFuture ? 'FUTURE DATE' : 'ENTRY DENIED';
+                const bg    = isExpired ? '#FFF7ED'  : isFuture ? '#EFF6FF' : '#FCEBEB';
+                const bdr   = isExpired ? '#FDBA74'  : isFuture ? '#93C5FD' : '#F09595';
+                const icoB  = isExpired ? '#FED7AA'  : isFuture ? '#DBEAFE' : '#F7C1C1';
+                const txtC  = isExpired ? '#9A3412'  : isFuture ? '#1E3A8A' : '#501313';
+                const ptC   = isExpired ? '#C2410C'  : isFuture ? '#1D4ED8' : '#791F1F';
+                resultCard.style.background = bg;
+                resultCard.style.border = `0.5px solid ${bdr}`;
+                resultCard.innerHTML = `
+                    <div style="width:56px;height:56px;background:${icoB};border-radius:50%;display:flex;align-items:center;
+                        justify-content:center;font-size:26px;margin:0 auto 12px">${icon}</div>
+                    <div style="font-size:1rem;font-weight:700;color:${txtC};letter-spacing:.04em">${title}</div>
+                    <p style="color:${ptC};font-size:.85rem;margin-top:8px">${msg}</p>
+                    <button onclick="closeResult()" style="margin-top:16px;width:100%;padding:8px;border-radius:8px;
+                        border:0.5px solid ${bdr};background:transparent;color:${txtC};font-size:.8rem;cursor:pointer">
+                        ✕ Clear
+                    </button>`;
+                setStatus(isExpired ? '📅 Token expired — wrong date' : isFuture ? '🗓️ Future token' : '❌ Token not found', 'error');
+            }
+        }
+
+        // ── Helpers ───────────────────────────────────────────────────────────
+        function setStatus(msg, type) {
+            const el = document.getElementById('scanStatus');
+            el.textContent  = msg;
+            el.className    = 'scan-status ' + type;
+        }
+
+        // ── Helper: patient detail rows with OPD card info ────────────────────
+        function _detailRows(token, opdCard, textColor, labelColor, borderColor) {
+            const rows = [
+                ['Patient',    token.user?.name || '—'],
+                ['Department', token.department],
+                ['Room',       token.room_number || '—'],
+                ['Doctor',     token.doctor_name || '—'],
+            ];
+            // OPD card fields agar available hain
+            if (opdCard) {
+                if (opdCard.card_number) rows.push(['OPD Card #', opdCard.card_number]);
+                if (opdCard.age)         rows.push(['Age',        opdCard.age + ' yrs']);
+                if (opdCard.gender)      rows.push(['Gender',     opdCard.gender]);
+                if (opdCard.blood_group) rows.push(['Blood Group', opdCard.blood_group]);
+                if (opdCard.phone)       rows.push(['Phone',      opdCard.phone]);
+            } else if (token.user?.phone) {
+                rows.push(['Phone', token.user.phone]);
+            }
+            return `<div style="display:flex;flex-direction:column;gap:0;text-align:left;margin-top:14px;
+                border-radius:10px;overflow:hidden;border:0.5px solid ${borderColor}">
+                ${rows.map((r, i) => `
+                <div style="display:flex;justify-content:space-between;padding:9px 12px;
+                    background:${i % 2 === 0 ? 'rgba(255,255,255,.6)' : 'rgba(255,255,255,.3)'}">
+                    <span style="color:${labelColor};font-size:.8rem">${r[0]}</span>
+                    <span style="color:${textColor};font-weight:600;font-size:.8rem">${r[1]}</span>
+                </div>`).join('')}
+            </div>`;
+        }
+
+        function closeResult() {
+            document.getElementById('resultCard').style.display = 'none';
+            // Reset cooldown so next scan works immediately
+            scanCooldown = false;
+            lastScanned  = '';
+            if (videoStream) setStatus('📷 Ready — point at next QR code', 'active');
+        }
+
+        function renderRecent() {
+            document.getElementById('recentVerifs').innerHTML = recentList.map(r => `
+                <div class="recent-item" style="border-left:3px solid ${r.valid ? '#639922' : '#EF9F27'}">
+                    <div>
+                        <div style="color:#2C2C2A;font-size:.83rem;font-weight:600">
+                            #${String(r.num).padStart(3,'0')} — ${r.name}
+                        </div>
+                        <div style="color:#888780;font-size:.74rem">
+                            ${r.dept} · ${r.time.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}
+                        </div>
+                    </div>
+                    <span style="font-size:18px">${r.valid ? '✅' : '⚠️'}</span>
+                </div>`).join('');
+        }
+
+        // ── Cleanup on page leave ─────────────────────────────────────────────
+        window.addEventListener('beforeunload', stopCamera);
+    </script>
+</body>
+
+</html>

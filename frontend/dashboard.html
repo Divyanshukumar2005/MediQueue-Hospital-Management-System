@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Dashboard — MediQueue</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleMobileSidebar()"></div>
+    <aside class="sidebar" id="sidebar"></aside>
+    <nav class="navbar" id="navbar"></nav>
+
+    <div class="app-layout">
+        <div class="main-content">
+
+            <div class="page-header slide-up">
+                <h1 id="welcomeMsg">Good morning</h1>
+                <p id="welcomeSub">Here is your health summary for today.</p>
+            </div>
+
+            <!-- Patient stats only -->
+            <div class="stats-grid stagger">
+                <div class="stat-card" style="cursor:pointer" onclick="window.location.href='appointment.html'">
+                    <div class="stat-icon stat-icon-blue">📅</div>
+                    <div class="stat-value" id="sAppt">—</div>
+                    <div class="stat-label">Upcoming Appointments</div>
+                </div>
+                <div class="stat-card" style="cursor:pointer" onclick="window.location.href='token.html'">
+                    <div class="stat-icon stat-icon-green">🎟️</div>
+                    <div class="stat-value" id="sTokenStatus" style="font-size:.88rem;">—</div>
+                    <div class="stat-label">Today's Token</div>
+                </div>
+                <div class="stat-card" style="cursor:pointer" onclick="window.location.href='opd.html'">
+                    <div class="stat-icon stat-icon-purple">📋</div>
+                    <div class="stat-value" id="sVisits">—</div>
+                    <div class="stat-label">Total OPD Visits</div>
+                </div>
+                <div class="stat-card" style="cursor:pointer" onclick="window.location.href='medicines.html'">
+                    <div class="stat-icon stat-icon-yellow">💊</div>
+                    <div class="stat-value" id="sMedStatus" style="font-size:.88rem;">—</div>
+                    <div class="stat-label">Medicine Status</div>
+                </div>
+            </div>
+
+            <!-- Medicine pickup alert (if ready) -->
+            <div id="medicineAlert" style="display:none;margin-bottom:24px"></div>
+
+            <!-- Quick actions (patient-facing only) -->
+            <div class="card card-xl slide-up" style="margin-bottom:24px">
+                <h3 style="margin-bottom:16px">Quick Actions</h3>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+                    <a href="appointment.html" class="card card-sm" style="display:flex;align-items:center;gap:12px;text-decoration:none">
+                        <div style="width:44px;height:44px;border-radius:10px;background:var(--c-primary-lt);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;font-family:var(--font-mono);font-weight:600;color:var(--c-primary)">📅</div>
+                        <div>
+                            <div style="font-weight:700;font-size:.88rem;color:var(--c-ink)">Book Appointment</div>
+                            <div style="font-size:.74rem;color:var(--c-ink-4)">Select date and doctor</div>
+                        </div>
+                    </a>
+                    <a href="token.html" class="card card-sm" style="display:flex;align-items:center;gap:12px;text-decoration:none">
+                        <div style="width:44px;height:44px;border-radius:10px;background:var(--green-100);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;font-family:var(--font-mono);font-weight:600;color:var(--c-ok)">📱</div>
+                        <div>
+                            <div style="font-weight:700;font-size:.88rem;color:var(--c-ink)">My Token</div>
+                            <div style="font-size:.74rem;color:var(--c-ink-4)">View QR code</div>
+                        </div>
+                    </a>
+                    <a href="opd.html" class="card card-sm" style="display:flex;align-items:center;gap:12px;text-decoration:none">
+                        <div style="width:44px;height:44px;border-radius:10px;background:var(--purple-100);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;font-family:var(--font-mono);font-weight:600;color:#7c3aed">📋</div>
+                        <div>
+                            <div style="font-weight:700;font-size:.88rem;color:var(--c-ink)">OPD Card</div>
+                            <div style="font-size:.74rem;color:var(--c-ink-4)">Health record</div>
+                        </div>
+                    </a>
+                    <a href="medicines.html" class="card card-sm" style="display:flex;align-items:center;gap:12px;text-decoration:none">
+                        <div style="width:44px;height:44px;border-radius:10px;background:var(--teal-100);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;font-family:var(--font-mono);font-weight:600;color:var(--c-warn)">💊</div>
+                        <div>
+                            <div style="font-weight:700;font-size:.88rem;color:var(--c-ink)">Medicine Stock</div>
+                            <div style="font-size:.74rem;color:var(--c-ink-4)">Check availability</div>
+                        </div>
+                    </a>
+                    <a href="history.html" class="card card-sm" style="display:flex;align-items:center;gap:12px;text-decoration:none">
+                        <div style="width:44px;height:44px;border-radius:10px;background:var(--yellow-100);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;font-family:var(--font-mono);font-weight:600;color:var(--c-ink-3)">🕑</div>
+                        <div>
+                            <div style="font-weight:700;font-size:.88rem;color:var(--c-ink)">Visit History</div>
+                            <div style="font-size:.74rem;color:var(--c-ink-4)">Past records</div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Upcoming appointments -->
+            <div class="table-wrapper slide-up" style="margin-bottom:24px">
+                <div class="table-header">
+                    <h3>Upcoming Appointments</h3>
+                    <a href="appointment.html" class="btn btn-primary btn-sm">Book New</a>
+                </div>
+                <div id="apptBody">
+                    <div class="empty-state">
+                        <div class="spinner spinner-blue"></div>
+                        <p>Loading appointments…</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live queue status -->
+            <div class="table-wrapper slide-up" style="margin-bottom:24px">
+                <div class="table-header">
+                    <h3>Live Queue Status</h3>
+                    <span class="live-badge"><span class="live-dot"></span>Live</span>
+                </div>
+                <div id="queueStatusBody">
+                    <div class="empty-state">
+                        <div class="spinner spinner-blue"></div>
+                        <p>Loading queue data…</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- Cancel Confirm Modal -->
+    <div id="cancelModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center;padding:16px">
+        <div style="background:var(--c-bg);border-radius:var(--r-lg);padding:28px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+            <div style="text-align:center;margin-bottom:20px">
+                <div style="font-size:48px;margin-bottom:12px">🗑️</div>
+                <h3 style="margin-bottom:8px;color:#dc2626">Cancel Appointment?</h3>
+                <p id="cancelModalMsg" style="font-size:.88rem;color:var(--c-ink-2)">Are you sure you want to cancel this appointment?</p>
+            </div>
+            <div style="display:flex;gap:12px">
+                <button class="btn btn-outline btn-full" onclick="closeCancelModal()">← Go Back</button>
+                <button class="btn btn-full" style="background:#dc2626;color:#fff;border:none" onclick="confirmCancel()">Yes, Cancel It</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+    <script src="script.js"></script>
+    <script>
+        if (!requireAuth(['patient'])) throw '';
+        const user = getUser();
+        document.getElementById('sidebar').innerHTML = buildSidebar('dashboard');
+        document.getElementById('navbar').innerHTML = buildNavbar('Dashboard', new Date().toLocaleDateString('en-IN', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        }));
+
+        const hr = new Date().getHours();
+        const greet = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
+        document.getElementById('welcomeMsg').textContent = `${greet}, ${user.name.split(' ')[0]}`;
+        document.getElementById('welcomeSub').textContent = 'Here is your health summary for today.';
+
+        let currentUserToken = null;
+
+        async function loadAll() {
+            try {
+                // Appointments
+                const apptData = await apiCall(`/appointments/user/${user.id}`);
+                const apts = apptData.appointments || [];
+                const upcoming = apts.filter(a => ['pending', 'confirmed'].includes(a.status) && new Date(a.appt_date) >= new Date(new Date().toDateString()));
+                document.getElementById('sAppt').textContent = upcoming.length;
+
+                if (!upcoming.length) {
+                    document.getElementById('apptBody').innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📅</div>
+          <h4>No upcoming appointments</h4>
+          <p>Book an appointment to receive a queue token for your visit.</p>
+          <a href="appointment.html" class="btn btn-primary btn-sm" style="margin-top:8px">Book Appointment</a>
+        </div>`;
+                } else {
+                    const rows = upcoming.map(a => `
+        <tr>
+          <td style="font-weight:600;font-size:.88rem">${fmtDate(a.appt_date)}</td>
+          <td>${DEPARTMENTS.find(d=>d.id===a.department)?.icon||''} ${a.department}</td>
+          <td style="font-size:.85rem">${a.doctor?.name || 'Any Available Doctor'}</td>
+          <td>${apptStatusBadge(a.status)}</td>
+          <td style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+            ${a.token_id
+              ? `<a href="token.html?id=${a.token_id}" class="btn btn-outline btn-sm">View Token</a>`
+              : (a.appt_date === (() => { const _d=new Date(); return `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`; })()
+                ? `<a href="appointment.html" class="btn btn-primary btn-sm">Get Token</a>`
+                : `<span style="font-size:.78rem;color:var(--c-ink-4)">Token on visit day</span>`)}
+            <button class="btn btn-sm" style="color:#dc2626;border:1px solid #fca5a5;background:transparent" onclick="cancelAppt(${a.id}, '${a.department}', '${a.appt_date}')">🗑️ Cancel</button>
+          </td>
+        </tr>`).join('');
+      document.getElementById('apptBody').innerHTML = `
+        <table><thead><tr><th>Date</th><th>Department</th><th>Doctor</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>${rows}</tbody></table>`;
+    }
+  } catch(e) {
+    document.getElementById('apptBody').innerHTML = `<div class="empty-state"><p>${e.message}</p></div>`;
+  }
+
+  // Token (active token for queue display)
+  try {
+    const tData = await apiCall(`/tokens/user/${user.id}`);
+    const _td = new Date(), _todayLocal = `${_td.getFullYear()}-${String(_td.getMonth()+1).padStart(2,'0')}-${String(_td.getDate()).padStart(2,'0')}`;
+    const todayToks = (tData.tokens||[]).filter(t => t.appt_date === _todayLocal);
+    currentUserToken = todayToks.find(t => ['waiting','called'].includes(t.status)) || null;
+  } catch(e) {}
+
+  // Next appointment date
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const nextAppt = upcoming.sort((a,b) => a.appt_date.localeCompare(b.appt_date))[0];
+    if (nextAppt) {
+      const d = new Date(nextAppt.appt_date + 'T00:00:00');
+      document.getElementById('sTokenStatus').textContent = fmtDate(d);
+    } else {
+      document.getElementById('sTokenStatus').textContent = 'No Token';
+    }
+  } catch(e) {
+    document.getElementById('sTokenStatus').textContent = '—';
+  }
+
+      
+
+  // Medicine status
+  try {
+    const medData = await apiCall(`/medicine-requests/user/${user.id}`);
+    const reqs = medData.requests || [];
+    const todayReq = reqs.find(r => new Date(r.createdAt).toDateString() === new Date().toDateString());
+    if (todayReq) {
+      const labels = { pending:'⏳ Pending', processing:'🔄 Processing', ready:'✅ Ready!', dispensed:'✅ Done' };
+      document.getElementById('sMedStatus').textContent = labels[todayReq.status] || todayReq.status;
+    } else {
+      document.getElementById('sMedStatus').textContent = 'No request';
+    }
+  } catch(e) { document.getElementById('sMedStatus').textContent = '—'; }
+
+  // OPD visits count
+  try {
+    const opdData = await apiCall(`/opd/${user.id}`);
+    document.getElementById('sVisits').textContent = opdData.opdCard?.visits?.length || 0;
+  } catch(e) { document.getElementById('sVisits').textContent = '0'; }
+
+  // Queue status — per department
+  try {
+    const qData = await apiCall('/queue-status');
+    const queues = qData.queues || [];
+    document.getElementById('queueStatusBody').innerHTML = queues.map(q => {
+      const dept = DEPARTMENTS.find(d=>d.id===q.department);
+      const pct  = q.total_today > 0 ? Math.round((q.completed_count / q.total_today) * 100) : 0;
+      const isMyDept = user && currentUserToken && currentUserToken.department === q.department;
+      return `
+        <div style="padding:16px 24px;border-bottom:1px solid var(--c-surface2);${isMyDept?'background:var(--c-primary-lt);':''}">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-size:22px">${dept?.icon||'🏥'}</span>
+              <div>
+                <div style="font-weight:700;font-size:.92rem">${q.department} ${isMyDept?'<span class="badge badge-blue" style="font-size:.7rem">Your Dept</span>':''}</div>
+                <div style="font-size:.75rem;color:var(--c-ink-4)">Room ${q.room_number||'—'}</div>
+              </div>
+            </div>
+            <span class="badge badge-green"><span class="dot dot-green"></span>Open</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px">
+            <div style="text-align:center;padding:8px;background:rgba(255,255,255,.7);border-radius:var(--r-md)">
+              <div style="font-family:var(--mono);font-size:1.4rem;font-weight:800;color:var(--c-primary-dk)">${q.current_token||'—'}</div>
+              <div style="font-size:.7rem;color:var(--c-ink-4)">Now Serving</div>
+            </div>
+            <div style="text-align:center;padding:8px;background:rgba(255,255,255,.7);border-radius:var(--r-md)">
+              <div style="font-family:var(--mono);font-size:1.4rem;font-weight:800;color:var(--yellow-500)">${q.waiting_count}</div>
+              <div style="font-size:.7rem;color:var(--c-ink-4)">Waiting</div>
+            </div>
+            <div style="text-align:center;padding:8px;background:rgba(255,255,255,.7);border-radius:var(--r-md)">
+              <div style="font-family:var(--mono);font-size:1.4rem;font-weight:800;color:var(--green-500)">${q.completed_count}</div>
+              <div style="font-size:.7rem;color:var(--c-ink-4)">Completed</div>
+            </div>
+            <div style="text-align:center;padding:8px;background:rgba(255,255,255,.7);border-radius:var(--r-md)">
+              <div style="font-family:var(--mono);font-size:1.4rem;font-weight:800;color:var(--c-ink-2)">${q.total_today}</div>
+              <div style="font-size:.7rem;color:var(--c-ink-4)">Total Today</div>
+            </div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:.74rem;color:var(--c-ink-4);margin-bottom:4px">
+              <span>Daily Progress</span><span>${pct}%</span>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+          </div>
+          ${isMyDept && currentUserToken ? `<div style="margin-top:8px;padding:8px 10px;background:var(--c-primary-lt);border-radius:var(--r-md);font-size:.8rem;color:var(--c-primary-dk);font-weight:500">
+            Your token #${currentUserToken.token_number} — ${q.current_token ? (currentUserToken.token_number - q.current_token) + ' patients ahead' : 'Not yet called'}
+          </div>` : ''}
+        </div>`;
+    }).join('') || '<div class="empty-state"><div class="empty-icon">🏥</div><h4>No queue data available</h4></div>';
+  } catch(e) {}
+
+  // Medicine pickup alert
+  try {
+    const mData = await apiCall(`/medicine-requests/user/${user.id}`);
+    const ready = (mData.requests||[]).find(r => r.status === 'ready');
+    if (ready) {
+      document.getElementById('medicineAlert').style.display = 'block';
+      document.getElementById('medicineAlert').innerHTML = `
+        <div style="background:linear-gradient(135deg,rgba(34,197,94,.15),rgba(34,197,94,.08));
+          border:1.5px solid rgba(34,197,94,.4);border-radius:var(--r-lg);padding:18px 20px;
+          display:flex;align-items:center;gap:14px">
+          <div style="font-size:32px">💊</div>
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:.95rem;color:#15803d">Your medicine is ready for pickup!</div>
+            <div style="font-size:.83rem;color:var(--c-ink-2);margin-top:2px">
+              Please collect your prescription from the Medicine Store — Room G-05.
+            </div>
+          </div>
+          <a href="medicines.html" class="btn btn-success btn-sm">View Details</a>
+        </div>`;
+    }
+  } catch(e) {}
+}
+
+        let pendingCancelId = null;
+
+        function cancelAppt(id, dept, date) {
+            pendingCancelId = id;
+            document.getElementById('cancelModalMsg').textContent =
+                `Cancel your ${dept} appointment on ${fmtDate(date)}? This cannot be undone.`;
+            document.getElementById('cancelModal').style.display='flex';
+        }
+
+        function closeCancelModal() {
+            pendingCancelId = null;
+            document.getElementById('cancelModal').style.display='none';
+        }
+
+        async function confirmCancel() {
+            if (!pendingCancelId) return;
+            const id = pendingCancelId;
+            closeCancelModal();
+            try {
+                await apiCall(`/appointments/${id}/cancel`, 'PATCH');
+                showToast('Appointment Cancelled', 'Your appointment has been cancelled.', 'info');
+                loadAll();
+            } catch(e) { showToast('Error', e.message, 'error'); }
+        }
+
+loadAll();
+setInterval(loadAll, 30000);
+    </script>
+</body>
+
+</html>
