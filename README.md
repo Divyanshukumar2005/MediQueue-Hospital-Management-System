@@ -40,7 +40,7 @@ The project started as an Express + MySQL application and was later migrated to 
 
 ### Booking rules
 
-Tokens open at 12:00 AM the day before the appointment date. A date can be booked from tomorrow onwards, up to one month in advance, and the last booking time for any date is 12:00 PM (noon) on that date.
+Booking for any date closes at 12:00 PM (noon) IST on that day. Before noon, the current day can still be booked; after noon, the earliest available date is tomorrow. Appointments can be booked up to one month in advance.
 
 ## Screenshots
 

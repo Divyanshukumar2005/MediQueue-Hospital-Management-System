@@ -154,7 +154,7 @@ export default function Appointment() {
                 <input className="form-control" type="date" value={date} min={win.minStr} max={win.maxStr} onChange={(e) => setDate(e.target.value)} />
               </div>
               <div style={{ marginTop: 10, padding: 10, background: 'var(--c-primary-lt)', borderRadius: 'var(--r-md)', fontSize: '.78rem', color: 'var(--c-primary-dk)' }}>
-                📌 Tokens open at <b>12:00 AM</b> for the next day onwards. Last booking for any date is <b>12:00 PM (noon)</b> of that date. You can book up to <b>1 month</b> in advance.
+                📌 Booking for a date closes at <b>12:00 PM (noon)</b> on that day. After noon, the earliest date available is tomorrow. You can book up to <b>1 month</b> in advance.
               </div>
               {date && (
                 <div style={{ marginTop: 10, padding: 10, borderRadius: 'var(--r-md)', background: dateError ? 'var(--red-100,#fee2e2)' : 'var(--c-primary-lt)' }}>
