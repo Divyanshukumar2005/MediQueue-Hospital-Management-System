@@ -1,0 +1,33 @@
+.admin-page .admin-grid { display:grid; grid-template-columns:1fr 360px; gap:24px; align-items:start; }
+@media (max-width:768px){ .admin-page .admin-grid{grid-template-columns:1fr} .admin-page .admin-stats{grid-template-columns:1fr 1fr !important} }
+.admin-page .admin-table { width:100%; table-layout:fixed; border-collapse:collapse; }
+.admin-page .admin-table thead th { font-size:.75rem; font-weight:600; text-transform:uppercase; letter-spacing:.05em; padding:10px 12px; text-align:left; border-bottom:1px solid var(--c-border,#e5e7eb); white-space:nowrap; overflow:hidden; }
+.admin-page .admin-table tbody td { padding:10px 12px; vertical-align:middle; border-bottom:1px solid var(--c-border,#f3f4f6); font-size:.85rem; }
+.admin-page .col-name{width:18%} .admin-page .col-email{width:24%} .admin-page .col-role{width:11%} .admin-page .col-auth{width:10%} .admin-page .col-status{width:10%} .admin-page .col-actions{width:27%}
+.admin-page .cell-name { display:flex; align-items:center; gap:10px; min-width:0; }
+.admin-page .cell-name span { font-weight:600; font-size:.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.admin-page .cell-name img { width:32px; height:32px; border-radius:50%; object-fit:cover; flex-shrink:0; }
+.admin-page .cell-email { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--c-ink-3,#6b7280); }
+.admin-page .cell-actions { display:flex; flex-direction:column; gap:6px; align-items:flex-start; }
+.admin-page .cell-actions .btn { white-space:nowrap; }
+.admin-page .cell-actions select.form-control { width:100%; padding:4px 8px; font-size:.76rem; }
+.admin-page .user-group { border:1px solid var(--c-border); border-radius:var(--r-lg); overflow:hidden; margin-bottom:10px; }
+.admin-page .user-group-head { display:flex; align-items:center; justify-content:space-between; padding:13px 16px; cursor:pointer; user-select:none; background:var(--c-surface2); transition:background .15s; }
+.admin-page .user-group-head:hover { background:var(--c-surface); }
+.admin-page .gh-left { display:flex; align-items:center; gap:10px; }
+.admin-page .gh-title { font-weight:700; font-size:.88rem; }
+.admin-page .gh-count { font-size:.7rem; font-weight:700; padding:2px 9px; border-radius:99px; background:var(--c-primary-lt); color:var(--c-primary-dk); }
+.admin-page .gh-arrow { font-size:.65rem; transition:transform .2s; color:var(--c-ink-4); }
+.admin-page .user-group-head.open .gh-arrow { transform:rotate(180deg); }
+.admin-page .ug-search { padding:10px 14px; border-bottom:1px solid var(--c-border); background:var(--c-surface2); }
+.admin-page .ug-search input { width:100%; padding:6px 10px; border-radius:var(--r-md); border:1px solid var(--c-border); font-size:.82rem; background:var(--c-bg); color:var(--c-ink); }
+.admin-page .ug-search input:focus { outline:none; border-color:var(--c-primary-mid); }
+.admin-page .dept-setting-card { background:var(--c-bg); border:1px solid var(--c-border); border-radius:var(--r-lg); padding:16px; border-top-width:3px; min-width:0; box-sizing:border-box; }
+.admin-page .doctor-row { display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--c-border); font-size:.84rem; }
+.admin-page .doctor-row:last-child { border-bottom:none; }
+.admin-page .admin-err { padding:8px 12px; background:var(--red-100); border-radius:var(--r-md); font-size:.82rem; color:#b91c1c; }
+.admin-page .admin-warn { padding:8px 12px; background:var(--yellow-100); border-radius:var(--r-md); font-size:.8rem; color:#92400e; }
+.admin-modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; display:flex; align-items:center; justify-content:center; padding:16px; }
+.admin-modal-box { background:var(--c-bg,#fff); border-radius:var(--r-lg); padding:28px; width:100%; max-width:460px; max-height:90vh; overflow-y:auto; position:relative; box-shadow:0 20px 60px rgba(0,0,0,.25); }
+.admin-modal-close { position:absolute; top:14px; right:16px; background:none; border:none; font-size:1rem; cursor:pointer; color:var(--c-ink-3); }
+.admin-overview td, .admin-overview th { padding:10px 12px; font-size:.84rem; }
