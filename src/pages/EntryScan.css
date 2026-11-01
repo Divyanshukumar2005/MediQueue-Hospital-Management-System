@@ -1,0 +1,34 @@
+.entry-page { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; background:#F5F4F0; }
+.entry-page .scanner-box { width:260px; height:260px; border-radius:16px; overflow:hidden; position:relative; background:#1a1a1a; border:2px solid #D3D1C7; margin:0 auto 16px; }
+.entry-page .scanner-box video, .entry-page .scanner-box canvas { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.entry-page .scanner-box canvas { display:none; }
+.entry-page .scan-corner { position:absolute; width:36px; height:36px; border-color:#185FA5; border-style:solid; border-width:0; z-index:10; }
+.entry-page .scan-corner.tl { top:18px; left:18px; border-top-width:3px; border-left-width:3px; border-radius:4px 0 0 0; }
+.entry-page .scan-corner.tr { top:18px; right:18px; border-top-width:3px; border-right-width:3px; border-radius:0 4px 0 0; }
+.entry-page .scan-corner.bl { bottom:18px; left:18px; border-bottom-width:3px; border-left-width:3px; border-radius:0 0 0 4px; }
+.entry-page .scan-corner.br { bottom:18px; right:18px; border-bottom-width:3px; border-right-width:3px; border-radius:0 0 4px 0; }
+.entry-page .scan-line { position:absolute; left:18px; right:18px; height:2px; z-index:10; background:linear-gradient(90deg,transparent,#185FA5,transparent); animation:entryScanMove 2s ease-in-out infinite; }
+@keyframes entryScanMove { 0%{top:18px;opacity:0} 10%{opacity:1} 90%{opacity:1} 100%{top:calc(100% - 20px);opacity:0} }
+.entry-page .scan-placeholder { position:absolute; inset:0; z-index:5; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:#888; font-size:.82rem; text-align:center; padding:20px; background:#1a1a1a; }
+.entry-page .scan-placeholder .icon { font-size:36px; }
+.entry-page .scan-status { font-size:.78rem; text-align:center; margin-bottom:12px; min-height:20px; font-weight:600; }
+.entry-page .scan-status.active { color:#185FA5; }
+.entry-page .scan-status.success { color:#2d7a0f; }
+.entry-page .scan-status.error { color:#b91c1c; }
+.entry-page .cam-btn { display:inline-flex; align-items:center; gap:6px; padding:8px 18px; border-radius:10px; font-size:.84rem; font-weight:600; cursor:pointer; border:1.5px solid; transition:all .2s; }
+.entry-page .cam-btn.start { background:#185FA5; color:#fff; border-color:#185FA5; }
+.entry-page .cam-btn.start:hover { background:#135089; }
+.entry-page .cam-btn.stop { background:#fff; color:#b91c1c; border-color:#fca5a5; }
+.entry-page .cam-btn.stop:hover { background:#fef2f2; }
+.entry-page .gate-card { background:#fff; border:.5px solid #D3D1C7; border-radius:20px; padding:28px; width:100%; max-width:440px; text-align:center; box-shadow:0 1px 8px rgba(0,0,0,.06); }
+.entry-page .result-card { width:100%; max-width:440px; border-radius:20px; padding:28px; text-align:center; animation:entryFadeUp .35s ease both; border:.5px solid #D3D1C7; margin-top:16px; }
+@keyframes entryFadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+.entry-page .manual-input { background:#F5F4F0 !important; border:.5px solid #C8C6BE !important; color:#2C2C2A !important; }
+.entry-page .manual-input::placeholder { color:#B4B2A9 !important; }
+.entry-page .manual-input:focus { border-color:#185FA5 !important; background:#fff !important; }
+.entry-page .recent-item { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:#fff; border-radius:10px; border:.5px solid #D3D1C7; }
+.entry-page .back-link { color:#888780; font-size:.8rem; margin-top:28px; text-decoration:underline; }
+.entry-page .back-link:hover { color:#185FA5; }
+.entry-page .or-divider { display:flex; align-items:center; gap:10px; margin:16px 0; color:#B4B2A9; font-size:.78rem; }
+.entry-page .or-divider::before, .entry-page .or-divider::after { content:''; flex:1; height:1px; background:#E8E6DF; }
+.entry-page .result-btn { margin-top:16px; width:100%; padding:8px; border-radius:8px; border:.5px solid; background:transparent; font-size:.8rem; cursor:pointer; }
